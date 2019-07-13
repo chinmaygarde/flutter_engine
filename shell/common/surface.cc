@@ -9,49 +9,6 @@
 
 namespace flutter {
 
-SurfaceFrame::SurfaceFrame(sk_sp<SkSurface> surface,
-                           SubmitCallback submit_callback)
-    : submitted_(false), surface_(surface), submit_callback_(submit_callback) {
-  FML_DCHECK(submit_callback_);
-}
-
-SurfaceFrame::~SurfaceFrame() {
-  if (submit_callback_ && !submitted_) {
-    // Dropping without a Submit.
-    submit_callback_(*this, nullptr);
-  }
-}
-
-bool SurfaceFrame::Submit() {
-  if (submitted_) {
-    return false;
-  }
-
-  submitted_ = PerformSubmit();
-
-  return submitted_;
-}
-
-SkCanvas* SurfaceFrame::SkiaCanvas() {
-  return surface_ != nullptr ? surface_->getCanvas() : nullptr;
-}
-
-sk_sp<SkSurface> SurfaceFrame::SkiaSurface() const {
-  return surface_;
-}
-
-bool SurfaceFrame::PerformSubmit() {
-  if (submit_callback_ == nullptr) {
-    return false;
-  }
-
-  if (submit_callback_(*this, SkiaCanvas())) {
-    return true;
-  }
-
-  return false;
-}
-
 Surface::Surface() = default;
 
 Surface::~Surface() = default;

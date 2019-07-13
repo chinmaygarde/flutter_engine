@@ -1,0 +1,45 @@
+// Copyright 2013 The Flutter Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef FLUTTER_SHELL_COMMON_SURFACE_FRAME_H_
+#define FLUTTER_SHELL_COMMON_SURFACE_FRAME_H_
+
+#include <functional>
+
+#include "flutter/fml/macros.h"
+#include "third_party/skia/include/core/SkCanvas.h"
+#include "third_party/skia/include/core/SkSurface.h"
+
+namespace flutter {
+
+/// Represents a Frame that has been fully configured for the underlying client
+/// rendering API. A frame may only be submitted once.
+class SurfaceFrame {
+ public:
+  using SubmitCallback =
+      std::function<bool(const SurfaceFrame& surface_frame, SkCanvas* canvas)>;
+
+  SurfaceFrame(sk_sp<SkSurface> surface, SubmitCallback submit_callback);
+
+  ~SurfaceFrame();
+
+  bool Submit();
+
+  SkCanvas* SkiaCanvas();
+
+  sk_sp<SkSurface> SkiaSurface() const;
+
+ private:
+  bool submitted_;
+  sk_sp<SkSurface> surface_;
+  SubmitCallback submit_callback_;
+
+  bool PerformSubmit();
+
+  FML_DISALLOW_COPY_AND_ASSIGN(SurfaceFrame);
+};
+
+}  // namespace flutter
+
+#endif  // FLUTTER_SHELL_COMMON_SURFACE_FRAME_H_

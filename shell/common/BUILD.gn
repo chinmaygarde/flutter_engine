@@ -84,6 +84,8 @@ source_set("common") {
     "skia_event_tracer_impl.h",
     "surface.cc",
     "surface.h",
+    "surface_frame.cc",
+    "surface_frame.h",
     "switches.cc",
     "switches.h",
     "thread_host.cc",
