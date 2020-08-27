@@ -89,7 +89,8 @@ source_set("fml") {
     "wakeable.h",
   ]
 
-  if (is_mac || is_ios || is_linux) {
+  # HACK: Cannot assume all linux variants can traverse backtraces.
+  if (false) {
     sources += [ "backtrace.cc" ]
   } else {
     sources += [ "backtrace_stub.cc" ]
