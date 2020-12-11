@@ -1189,5 +1189,18 @@ TEST_F(EmbedderTest, CanLaunchAndShutdownWithAValidElfSource) {
   engine.reset();
 }
 
+TEST_F(EmbedderTest, StackRunaway) {
+  auto& context = GetEmbedderContext(ContextType::kSoftwareContext);
+  fml::AutoResetWaitableEvent latch;
+  EmbedderConfigBuilder builder(context);
+  builder.SetDartEntrypoint("StackRunaway");
+  builder.SetSoftwareRendererConfig();
+  auto engine = builder.LaunchEngine();
+  ASSERT_TRUE(engine.is_valid());
+  // Wait for the root isolate to launch.
+  latch.Wait();
+  engine.reset();
+}
+
 }  // namespace testing
 }  // namespace flutter

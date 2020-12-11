@@ -820,3 +820,16 @@ void nativeArgumentsCallback(List<String> args) native 'NativeArgumentsCallback'
 void dart_entrypoint_args(List<String> args) {
   nativeArgumentsCallback(args);
 }
+
+
+
+
+Future<void> StackRunaway2(int i) async {
+  print(i);
+  StackRunaway2(i + 1);
+}
+
+@pragma('vm:entry-point')
+void StackRunaway() {
+  StackRunaway2(1);
+}

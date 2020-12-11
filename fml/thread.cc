@@ -6,6 +6,8 @@
 
 #include "flutter/fml/thread.h"
 
+#include <unistd.h>
+
 #include <memory>
 #include <string>
 
@@ -23,23 +25,65 @@
 
 namespace fml {
 
+typedef void (*ThreadEntry)(Thread*);
+
+static size_t NextPageSizeMultiple(size_t size) {
+  const size_t page_size = sysconf(_SC_PAGESIZE);
+  FML_CHECK(page_size != 0);
+
+  size = std::max<size_t>(size, page_size);
+
+  size_t rem = size % page_size;
+
+  if (rem == 0) {
+    return size;
+  }
+
+  return size + page_size - rem;
+}
+
+static bool CreateThread(pthread_t* thread,
+                         ThreadEntry main,
+                         Thread* argument,
+                         size_t stack_size) {
+  pthread_attr_t thread_attributes;
+
+  if (pthread_attr_init(&thread_attributes) != 0) {
+    return false;
+  }
+
+  stack_size = std::max<size_t>(NextPageSizeMultiple(PTHREAD_STACK_MIN),
+                                NextPageSizeMultiple(stack_size));
+
+  if (pthread_attr_setstacksize(&thread_attributes, stack_size) != 0) {
+    return false;
+  }
+
+  auto result =
+      pthread_create(thread, &thread_attributes,
+                     reinterpret_cast<void* (*)(void*)>(main), argument);
+
+  pthread_attr_destroy(&thread_attributes);
+
+  return result == 0;
+}
+
 Thread::Thread(const std::string& name) : joined_(false) {
-  fml::AutoResetWaitableEvent latch;
-  fml::RefPtr<fml::TaskRunner> runner;
-  thread_ = std::make_unique<std::thread>([&latch, &runner, name]() -> void {
-    SetCurrentThreadName(name);
-    fml::MessageLoop::EnsureInitializedForCurrentThread();
-    auto& loop = MessageLoop::GetCurrent();
-    runner = loop.GetTaskRunner();
-    latch.Signal();
-    loop.Run();
-  });
-  latch.Wait();
-  task_runner_ = runner;
+  FML_CHECK(CreateThread(
+      &thread_, [](Thread* thread) { thread->Main(); }, this, 1 << 20));
+  latch_.Wait();
 }
 
 Thread::~Thread() {
   Join();
+}
+
+void Thread::Main() {
+  fml::MessageLoop::EnsureInitializedForCurrentThread();
+  auto& loop = MessageLoop::GetCurrent();
+  task_runner_ = loop.GetTaskRunner();
+  latch_.Signal();
+  loop.Run();
 }
 
 fml::RefPtr<fml::TaskRunner> Thread::GetTaskRunner() const {
@@ -52,7 +96,7 @@ void Thread::Join() {
   }
   joined_ = true;
   task_runner_->PostTask([]() { MessageLoop::GetCurrent().Terminate(); });
-  thread_->join();
+  FML_CHECK(pthread_join(thread_, nullptr) == 0);
 }
 
 #if defined(OS_WIN)

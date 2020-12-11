@@ -5,11 +5,14 @@
 #ifndef FLUTTER_FML_THREAD_H_
 #define FLUTTER_FML_THREAD_H_
 
+#include <pthread.h>
+
 #include <atomic>
 #include <memory>
 #include <thread>
 
 #include "flutter/fml/macros.h"
+#include "flutter/fml/synchronization/waitable_event.h"
 #include "flutter/fml/task_runner.h"
 
 namespace fml {
@@ -26,10 +29,13 @@ class Thread {
 
   static void SetCurrentThreadName(const std::string& name);
 
+  void Main();
+
  private:
-  std::unique_ptr<std::thread> thread_;
+  pthread_t thread_;
   fml::RefPtr<fml::TaskRunner> task_runner_;
   std::atomic_bool joined_;
+  fml::AutoResetWaitableEvent latch_;
 
   FML_DISALLOW_COPY_AND_ASSIGN(Thread);
 };
