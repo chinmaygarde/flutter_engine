@@ -178,6 +178,7 @@ group("unittests") {
 
     if (is_mac || is_linux || is_win) {
       public_deps += [ "//flutter/impeller:impeller_unittests" ]
+      public_deps += [ "//flutter/impeller/doom" ]
     }
 
     if (is_mac) {

@@ -133,3 +133,5 @@ app.*.symbols
 
 # Prebuilt binaries.
 /prebuilts/
+
+/impeller/doom/
