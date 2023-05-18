@@ -20,7 +20,9 @@
 
 namespace impeller {
 
+class PlaygroundWSI;
 class PlaygroundImpl;
+class PlaygroundWindow;
 
 enum class PlaygroundBackend {
   kMetal,
@@ -93,11 +95,10 @@ class Playground {
   virtual bool ShouldKeepRendering() const;
 
  private:
-  struct GLFWInitializer;
-
   fml::TimeDelta start_time_;
-  std::unique_ptr<GLFWInitializer> glfw_initializer_;
+  std::unique_ptr<PlaygroundWSI> wsi_;
   std::unique_ptr<PlaygroundImpl> impl_;
+  std::unique_ptr<PlaygroundWindow> window_;
   std::shared_ptr<Context> context_;
   std::unique_ptr<Renderer> renderer_;
   Point cursor_position_;

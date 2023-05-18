@@ -67,7 +67,11 @@ group("impeller") {
 }
 
 impeller_component("impeller_unittests") {
-  target_type = "executable"
+  if (is_android) {
+    target_type = "shared_library"
+  } else {
+    target_type = "executable"
+  }
 
   testonly = true
 
@@ -97,7 +101,7 @@ impeller_component("impeller_unittests") {
     ]
   }
 
-  if (impeller_enable_vulkan) {
+  if (impeller_enable_vulkan && !is_android) {
     deps += [ "//flutter/impeller/renderer/backend/vulkan:vulkan_unittests" ]
   }
 

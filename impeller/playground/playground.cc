@@ -13,9 +13,6 @@
 #include "impeller/renderer/command_buffer.h"
 #include "impeller/runtime_stage/runtime_stage.h"
 
-#define GLFW_INCLUDE_NONE
-#include "third_party/glfw/include/GLFW/glfw3.h"
-
 #include "flutter/fml/paths.h"
 #include "impeller/base/validation.h"
 #include "impeller/core/allocator.h"
@@ -24,10 +21,11 @@
 #include "impeller/playground/imgui/imgui_impl_impeller.h"
 #include "impeller/playground/playground.h"
 #include "impeller/playground/playground_impl.h"
+#include "impeller/playground/wsi/playground_window.h"
 #include "impeller/renderer/context.h"
 #include "impeller/renderer/render_pass.h"
 #include "impeller/renderer/renderer.h"
-#include "third_party/imgui/backends/imgui_impl_glfw.h"
+
 #include "third_party/imgui/imgui.h"
 
 #if FML_OS_MACOSX
@@ -49,38 +47,7 @@ std::string PlaygroundBackendToString(PlaygroundBackend backend) {
   FML_UNREACHABLE();
 }
 
-struct Playground::GLFWInitializer {
-  GLFWInitializer() {
-    // This guard is a hack to work around a problem where glfwCreateWindow
-    // hangs when opening a second window after GLFW has been reinitialized (for
-    // example, when flipping through multiple playground tests).
-    //
-    // Explanation:
-    //  * glfwCreateWindow calls [NSApp run], which begins running the event
-    //    loop on the current thread.
-    //  * GLFW then immediately stops the loop when
-    //    applicationDidFinishLaunching is fired.
-    //  * applicationDidFinishLaunching is only ever fired once during the
-    //    application's lifetime, so subsequent calls to [NSApp run] will always
-    //    hang with this setup.
-    //  * glfwInit resets the flag that guards against [NSApp run] being
-    //    called a second time, which causes the subsequent `glfwCreateWindow`
-    //    to hang indefinitely in the event loop, because
-    //    applicationDidFinishLaunching is never fired.
-    static std::once_flag sOnceInitializer;
-    std::call_once(sOnceInitializer, []() {
-      ::glfwSetErrorCallback([](int code, const char* description) {
-        FML_LOG(ERROR) << "GLFW Error '" << description << "'  (" << code
-                       << ").";
-      });
-      FML_CHECK(::glfwInit() == GLFW_TRUE);
-    });
-  }
-};
-
-Playground::Playground(PlaygroundSwitches switches)
-    : switches_(switches),
-      glfw_initializer_(std::make_unique<GLFWInitializer>()) {}
+Playground::Playground(PlaygroundSwitches switches) : switches_(switches) {}
 
 Playground::~Playground() = default;
 
@@ -150,19 +117,6 @@ bool Playground::ShouldOpenNewPlaygrounds() {
   return gShouldOpenNewPlaygrounds;
 }
 
-static void PlaygroundKeyCallback(GLFWwindow* window,
-                                  int key,
-                                  int scancode,
-                                  int action,
-                                  int mods) {
-  if ((key == GLFW_KEY_ESCAPE) && action == GLFW_RELEASE) {
-    if (mods & (GLFW_MOD_CONTROL | GLFW_MOD_SUPER | GLFW_MOD_SHIFT)) {
-      gShouldOpenNewPlaygrounds = false;
-    }
-    ::glfwSetWindowShouldClose(window, GLFW_TRUE);
-  }
-}
-
 Point Playground::GetCursorPosition() const {
   return cursor_position_;
 }
@@ -214,32 +168,14 @@ bool Playground::OpenPlaygroundHere(
     return false;
   }
 
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  fml::ScopedCleanupClosure destroy_imgui_context(
-      []() { ImGui::DestroyContext(); });
-  ImGui::StyleColorsDark();
-
-  auto& io = ImGui::GetIO();
-  io.IniFilename = nullptr;
-  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-  io.ConfigWindowsResizeFromEdges = true;
-
-  auto window = reinterpret_cast<GLFWwindow*>(impl_->GetWindowHandle());
-  if (!window) {
+  if (!window_) {
     return false;
   }
-  ::glfwSetWindowTitle(window, GetWindowTitle().c_str());
-  ::glfwSetWindowUserPointer(window, this);
-  ::glfwSetWindowSizeCallback(
-      window, [](GLFWwindow* window, int width, int height) -> void {
-        auto playground =
-            reinterpret_cast<Playground*>(::glfwGetWindowUserPointer(window));
-        if (!playground) {
-          return;
-        }
-        playground->SetWindowSize(ISize{width, height}.Max({}));
-      });
+
+  window_->SetWindowTitle(GetWindowTitle());
+  window_->SetResizeCallback(
+      [&](ISize window_size) { SetWindowSize(window_size); });
+
   ::glfwSetKeyCallback(window, &PlaygroundKeyCallback);
   ::glfwSetCursorPosCallback(window, [](GLFWwindow* window, double x,
                                         double y) {

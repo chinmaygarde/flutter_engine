@@ -7,14 +7,11 @@
 #include <CoreImage/CoreImage.h>
 #include "impeller/renderer/backend/metal/context_mtl.h"
 #include "impeller/renderer/backend/metal/texture_mtl.h"
-#define GLFW_INCLUDE_NONE
-#include "third_party/glfw/include/GLFW/glfw3.h"
 
 namespace impeller {
 namespace testing {
 
 MetalScreenshoter::MetalScreenshoter() {
-  FML_CHECK(::glfwInit() == GLFW_TRUE);
   playground_ =
       PlaygroundImpl::Create(PlaygroundBackend::kMetal, PlaygroundSwitches{});
   aiks_context_.reset(new AiksContext(playground_->GetContext()));

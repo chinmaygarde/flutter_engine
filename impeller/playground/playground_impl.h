@@ -14,16 +14,13 @@
 
 namespace impeller {
 
+class PlaygroundWindow;
 class PlaygroundImpl {
  public:
   static std::unique_ptr<PlaygroundImpl> Create(PlaygroundBackend backend,
                                                 PlaygroundSwitches switches);
 
   virtual ~PlaygroundImpl();
-
-  using WindowHandle = void*;
-
-  virtual WindowHandle GetWindowHandle() const = 0;
 
   virtual std::shared_ptr<Context> GetContext() const = 0;
 
@@ -34,8 +31,10 @@ class PlaygroundImpl {
 
  protected:
   const PlaygroundSwitches switches_;
+  std::unique_ptr<PlaygroundWindow> window_;
 
-  explicit PlaygroundImpl(PlaygroundSwitches switches);
+  explicit PlaygroundImpl(PlaygroundSwitches switches,
+                          std::unique_ptr<PlaygroundWindow> window);
 
  private:
   FML_DISALLOW_COPY_AND_ASSIGN(PlaygroundImpl);

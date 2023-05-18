@@ -49,9 +49,8 @@ impeller_component("playground") {
     "../renderer",
     "../scene/shaders",
     "imgui:imgui_impeller_backend",
+    "wsi",
     "//flutter/fml",
-    "//third_party/glfw",
-    "//third_party/imgui:imgui_glfw",
   ]
 
   if (is_mac) {

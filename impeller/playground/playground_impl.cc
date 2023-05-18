@@ -4,8 +4,7 @@
 
 #include "impeller/playground/playground_impl.h"
 
-#define GLFW_INCLUDE_NONE
-#include "third_party/glfw/include/GLFW/glfw3.h"
+#include "impeller/playground/wsi/playground_window.h"
 
 #if IMPELLER_ENABLE_METAL
 #include "impeller/playground/backend/metal/playground_impl_mtl.h"
@@ -45,18 +44,17 @@ std::unique_ptr<PlaygroundImpl> PlaygroundImpl::Create(
   FML_UNREACHABLE();
 }
 
-PlaygroundImpl::PlaygroundImpl(PlaygroundSwitches switches)
-    : switches_(switches) {}
+PlaygroundImpl::PlaygroundImpl(PlaygroundSwitches switches,
+                               std::unique_ptr<PlaygroundWindow> window)
+    : switches_(switches), window_(std::move(window)) {}
 
 PlaygroundImpl::~PlaygroundImpl() = default;
 
 Vector2 PlaygroundImpl::GetContentScale() const {
-  auto window = reinterpret_cast<GLFWwindow*>(GetWindowHandle());
-
-  Vector2 scale(1, 1);
-  ::glfwGetWindowContentScale(window, &scale.x, &scale.y);
-
-  return scale;
+  if (!window_) {
+    return {1.0f, 1.0f};
+  }
+  return window_->GetContentScale();
 }
 
 }  // namespace impeller

@@ -21,16 +21,8 @@ class PlaygroundImplVK final : public PlaygroundImpl {
   std::shared_ptr<fml::ConcurrentMessageLoop> concurrent_loop_;
   std::shared_ptr<Context> context_;
 
-  // Windows management.
-  static void DestroyWindowHandle(WindowHandle handle);
-  using UniqueHandle = std::unique_ptr<void, decltype(&DestroyWindowHandle)>;
-  UniqueHandle handle_;
-
   // |PlaygroundImpl|
   std::shared_ptr<Context> GetContext() const override;
-
-  // |PlaygroundImpl|
-  WindowHandle GetWindowHandle() const override;
 
   // |PlaygroundImpl|
   std::unique_ptr<Surface> AcquireSurfaceFrame(

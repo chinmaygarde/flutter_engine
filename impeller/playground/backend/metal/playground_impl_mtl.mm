@@ -4,12 +4,6 @@
 
 #include "impeller/playground/backend/metal/playground_impl_mtl.h"
 
-#define GLFW_INCLUDE_NONE
-#import "third_party/glfw/include/GLFW/glfw3.h"
-
-#define GLFW_EXPOSE_NATIVE_COCOA
-#import "third_party/glfw/include/GLFW/glfw3native.h"
-
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
 
@@ -53,24 +47,8 @@ ShaderLibraryMappingsForPlayground() {
   };
 }
 
-void PlaygroundImplMTL::DestroyWindowHandle(WindowHandle handle) {
-  if (!handle) {
-    return;
-  }
-  ::glfwDestroyWindow(reinterpret_cast<GLFWwindow*>(handle));
-}
-
 PlaygroundImplMTL::PlaygroundImplMTL(PlaygroundSwitches switches)
-    : PlaygroundImpl(switches),
-      handle_(nullptr, &DestroyWindowHandle),
-      data_(std::make_unique<Data>()) {
-  ::glfwDefaultWindowHints();
-  ::glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  ::glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-  auto window = ::glfwCreateWindow(1, 1, "Test", nullptr, nullptr);
-  if (!window) {
-    return;
-  }
+    : PlaygroundImpl(switches), data_(std::make_unique<Data>()) {
   auto context = ContextMTL::Create(ShaderLibraryMappingsForPlayground(),
                                     "Playground Library");
   if (!context) {

@@ -4,14 +4,9 @@
 
 #include "impeller/playground/backend/vulkan/playground_impl_vk.h"
 
-#include "flutter/fml/paths.h"
-#include "impeller/renderer/backend/vulkan/vk.h"
-
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
 #include "flutter/fml/logging.h"
 #include "flutter/fml/mapping.h"
+#include "flutter/fml/paths.h"
 #include "impeller/entity/vk/entity_shaders_vk.h"
 #include "impeller/entity/vk/modern_shaders_vk.h"
 #include "impeller/fixtures/vk/fixtures_shaders_vk.h"
@@ -20,6 +15,7 @@
 #include "impeller/renderer/backend/vulkan/formats_vk.h"
 #include "impeller/renderer/backend/vulkan/surface_vk.h"
 #include "impeller/renderer/backend/vulkan/texture_vk.h"
+#include "impeller/renderer/backend/vulkan/vk.h"
 #include "impeller/scene/shaders/vk/scene_shaders_vk.h"
 
 namespace impeller {
@@ -41,42 +37,9 @@ ShaderLibraryMappingsForPlayground() {
   };
 }
 
-void PlaygroundImplVK::DestroyWindowHandle(WindowHandle handle) {
-  if (!handle) {
-    return;
-  }
-  ::glfwDestroyWindow(reinterpret_cast<GLFWwindow*>(handle));
-}
-
 PlaygroundImplVK::PlaygroundImplVK(PlaygroundSwitches switches)
     : PlaygroundImpl(switches),
-      concurrent_loop_(fml::ConcurrentMessageLoop::Create()),
-      handle_(nullptr, &DestroyWindowHandle) {
-  if (!::glfwVulkanSupported()) {
-#ifdef TARGET_OS_MAC
-    VALIDATION_LOG << "Attempted to initialize a Vulkan playground on macOS "
-                      "where Vulkan cannot be found. It can be installed via "
-                      "MoltenVK and make sure to install it globally so "
-                      "dlopen can find it.";
-#else
-    VALIDATION_LOG << "Attempted to initialize a Vulkan playground on a system "
-                      "that does not support Vulkan.";
-#endif
-    return;
-  }
-
-  ::glfwDefaultWindowHints();
-  ::glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  ::glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-
-  auto window = ::glfwCreateWindow(1, 1, "Test", nullptr, nullptr);
-  if (!window) {
-    VALIDATION_LOG << "Unable to create glfw window";
-    return;
-  }
-
-  handle_.reset(window);
-
+      concurrent_loop_(fml::ConcurrentMessageLoop::Create()) {
   ContextVK::Settings context_settings;
   context_settings.proc_address_callback =
       reinterpret_cast<PFN_vkGetInstanceProcAddr>(
@@ -120,11 +83,6 @@ PlaygroundImplVK::~PlaygroundImplVK() = default;
 // |PlaygroundImpl|
 std::shared_ptr<Context> PlaygroundImplVK::GetContext() const {
   return context_;
-}
-
-// |PlaygroundImpl|
-PlaygroundImpl::WindowHandle PlaygroundImplVK::GetWindowHandle() const {
-  return handle_.get();
 }
 
 // |PlaygroundImpl|

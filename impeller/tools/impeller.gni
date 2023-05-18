@@ -60,7 +60,12 @@ declare_args() {
 #                               target platform, this target is a no-op.
 #
 template("impeller_component") {
-  if (defined(invoker.testonly) && invoker.testonly && !enable_unittests) {
+  impeller_unittests_enabled = enable_unittests
+  if (is_android) {
+    impeller_unittests_enabled = true
+  }
+  if (!impeller_unittests_enabled && defined(invoker.testonly) &&
+      invoker.testonly) {
     group(target_name) {
       not_needed(invoker, "*")
     }

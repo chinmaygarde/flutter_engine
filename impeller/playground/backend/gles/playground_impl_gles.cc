@@ -4,9 +4,6 @@
 
 #include "impeller/playground/backend/gles/playground_impl_gles.h"
 
-#define GLFW_INCLUDE_NONE
-#include "third_party/glfw/include/GLFW/glfw3.h"
-
 #include "flutter/fml/build_config.h"
 #include "impeller/entity/gles/entity_shaders_gles.h"
 #include "impeller/fixtures/gles/fixtures_shaders_gles.h"
@@ -44,43 +41,12 @@ class PlaygroundImplGLES::ReactorWorker final : public ReactorGLES::Worker {
   FML_DISALLOW_COPY_AND_ASSIGN(ReactorWorker);
 };
 
-void PlaygroundImplGLES::DestroyWindowHandle(WindowHandle handle) {
-  if (!handle) {
-    return;
-  }
-  ::glfwDestroyWindow(reinterpret_cast<GLFWwindow*>(handle));
-}
-
 PlaygroundImplGLES::PlaygroundImplGLES(PlaygroundSwitches switches)
     : PlaygroundImpl(switches),
-      handle_(nullptr, &DestroyWindowHandle),
       worker_(std::shared_ptr<ReactorWorker>(new ReactorWorker())) {
-  ::glfwDefaultWindowHints();
+  // TODO(csg): Create the PlaygroundWindow here.
 
-#if FML_OS_MACOSX
-  // ES Profiles are not supported on Mac.
-  ::glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
-#else   // FML_OS_MACOSX
-  ::glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-  ::glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-  ::glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-#endif  // FML_OS_MACOSX
-  ::glfwWindowHint(GLFW_RED_BITS, 8);
-  ::glfwWindowHint(GLFW_GREEN_BITS, 8);
-  ::glfwWindowHint(GLFW_BLUE_BITS, 8);
-  ::glfwWindowHint(GLFW_ALPHA_BITS, 8);
-  ::glfwWindowHint(GLFW_DEPTH_BITS, 32);   // 32 bit depth buffer
-  ::glfwWindowHint(GLFW_STENCIL_BITS, 8);  // 8 bit stencil buffer
-  ::glfwWindowHint(GLFW_SAMPLES, 4);       // 4xMSAA
-
-  ::glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-
-  auto window = ::glfwCreateWindow(1, 1, "Test", nullptr, nullptr);
-
-  ::glfwMakeContextCurrent(window);
   worker_->SetReactionsAllowedOnCurrentThread(true);
-
-  handle_.reset(window);
 }
 
 PlaygroundImplGLES::~PlaygroundImplGLES() = default;
@@ -125,11 +91,6 @@ std::shared_ptr<Context> PlaygroundImplGLES::GetContext() const {
     return nullptr;
   }
   return context;
-}
-
-// |PlaygroundImpl|
-PlaygroundImpl::WindowHandle PlaygroundImplGLES::GetWindowHandle() const {
-  return handle_.get();
 }
 
 // |PlaygroundImpl|

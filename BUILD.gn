@@ -140,8 +140,10 @@ group("unittests") {
 
   public_deps = []
   if (is_android) {
-    public_deps +=
-        [ "//flutter/shell/platform/android:flutter_shell_native_unittests" ]
+    public_deps += [
+      "//flutter/impeller:impeller_unittests",
+      "//flutter/shell/platform/android:flutter_shell_native_unittests",
+    ]
   }
 
   # Compile all unittests targets if enabled.
