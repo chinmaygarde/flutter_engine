@@ -13,7 +13,12 @@ PlaygroundWindow::PlaygroundWindow() = default;
 PlaygroundWindow::~PlaygroundWindow() = default;
 
 void PlaygroundWindow::SetResizeCallback(ResizeCallback callback) {
-  resize_callback_ = std::move(callback);
+  ResizeCallback validated_callback = [callback](auto size) {
+    if (callback) {
+      callback(size.Max({0u, 0u}));
+    }
+  };
+  resize_callback_ = std::move(validated_callback);
 }
 
 void PlaygroundWindow::SetKeyCallback(KeyCallback callback) {
@@ -26,6 +31,11 @@ void PlaygroundWindow::SetCursorCallback(CursorCallback callback) {
 
 void PlaygroundWindow::SetOnRenderFrameCallback(OnRenderCallback callback) {
   on_render_frame_callback_ = std::move(callback);
+}
+
+void PlaygroundWindow::SetSurfaceAcquireCallback(
+    SurfaceAcquireCallback callback) {
+  surface_acquire_callback_ = callback;
 }
 
 }  // namespace impeller

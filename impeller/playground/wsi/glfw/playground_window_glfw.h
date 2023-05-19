@@ -14,6 +14,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include "third_party/glfw/include/GLFW/glfw3.h"
 #define GLFW_EXPOSE_NATIVE_COCOA
+#include "impeller/base/auto_release_pool.h"
 #include "third_party/glfw/include/GLFW/glfw3native.h"
 #include "third_party/imgui/backends/imgui_impl_glfw.h"
 #include "third_party/imgui/imgui.h"
@@ -70,7 +71,7 @@ class PlaygroundWindowGLFW final : public PlaygroundWindow {
         []() { ImGui_ImplGlfw_Shutdown(); });
 
     // Setup Impeller Imgui Hooks.
-    ImGui_ImplImpeller_Init(renderer_->GetContext());
+    ImGui_ImplImpeller_Init(context);
     fml::ScopedCleanupClosure shutdown_imgui_impeller(
         []() { ImGui_ImplImpeller_Shutdown(); });
 
@@ -82,6 +83,7 @@ class PlaygroundWindowGLFW final : public PlaygroundWindow {
     ImGui::SetNextWindowPos({10, 10});
 
     while (true) {
+      AutoReleasePool pool;
       ::glfwPollEvents();
 
       if (::glfwWindowShouldClose(window_)) {
@@ -121,11 +123,14 @@ class PlaygroundWindowGLFW final : public PlaygroundWindow {
     return true;
   }
 
-  bool RenderImguiOverlay(RenderTarget& render_target) const {
+  bool RenderImguiOverlay(std::shared_ptr<impeller::Context> context,
+                          RenderTarget& render_target) const {
     // Ask ImGUI to prep it buffers for render.
     ImGui::Render();
-
-    auto buffer = renderer->GetContext()->CreateCommandBuffer();
+    if (!context) {
+      return false;
+    }
+    auto buffer = context->CreateCommandBuffer();
     if (!buffer) {
       return false;
     }

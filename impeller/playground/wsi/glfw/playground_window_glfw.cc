@@ -360,7 +360,7 @@ PlaygroundWindowGLFW::PlaygroundWindowGLFW(PlaygroundWSIBackend backend)
           return;
         }
         if (thiz->resize_callback_) {
-          thiz->resize_callback_(ISize{width, height}.Max({}));
+          thiz->resize_callback_(ISize{width, height});
         }
       });
   ::glfwSetKeyCallback(window, [](GLFWwindow* window, int key, int scancode,

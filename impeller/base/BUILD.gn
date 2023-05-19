@@ -8,6 +8,8 @@ impeller_component("base") {
   sources = [
     "allocation.cc",
     "allocation.h",
+    "auto_release_pool.cc",
+    "auto_release_pool.h",
     "backend_cast.h",
     "comparable.cc",
     "comparable.h",

@@ -7,31 +7,24 @@
 #include <optional>
 #include <sstream>
 
-#include "fml/time/time_point.h"
-#include "impeller/image/backends/skia/compressed_image_skia.h"
-#include "impeller/image/decompressed_image.h"
-#include "impeller/renderer/command_buffer.h"
-#include "impeller/runtime_stage/runtime_stage.h"
-
 #include "flutter/fml/paths.h"
+#include "fml/time/time_point.h"
 #include "impeller/base/validation.h"
 #include "impeller/core/allocator.h"
 #include "impeller/core/formats.h"
+#include "impeller/image/backends/skia/compressed_image_skia.h"
 #include "impeller/image/compressed_image.h"
+#include "impeller/image/decompressed_image.h"
 #include "impeller/playground/imgui/imgui_impl_impeller.h"
 #include "impeller/playground/playground.h"
 #include "impeller/playground/playground_impl.h"
 #include "impeller/playground/wsi/playground_window.h"
+#include "impeller/renderer/command_buffer.h"
 #include "impeller/renderer/context.h"
 #include "impeller/renderer/render_pass.h"
 #include "impeller/renderer/renderer.h"
-
+#include "impeller/runtime_stage/runtime_stage.h"
 #include "third_party/imgui/imgui.h"
-
-#if FML_OS_MACOSX
-#include <objc/message.h>
-#include <objc/runtime.h>
-#endif
 
 namespace impeller {
 
@@ -137,23 +130,6 @@ void Playground::SetCursorPosition(Point pos) {
   cursor_position_ = pos;
 }
 
-#if FML_OS_MACOSX
-class AutoReleasePool {
- public:
-  AutoReleasePool() {
-    pool_ = reinterpret_cast<msg_send>(objc_msgSend)(
-        objc_getClass("NSAutoreleasePool"), sel_getUid("new"));
-  }
-  ~AutoReleasePool() {
-    reinterpret_cast<msg_send>(objc_msgSend)(pool_, sel_getUid("drain"));
-  }
-
- private:
-  typedef id (*msg_send)(void*, SEL);
-  id pool_;
-};
-#endif
-
 bool Playground::OpenPlaygroundHere(
     const Renderer::RenderCallback& render_callback) {
   if (!switches_.enable_playground) {
@@ -169,6 +145,11 @@ bool Playground::OpenPlaygroundHere(
   }
 
   if (!window_) {
+    return false;
+  }
+
+  auto context = impl_->GetContext();
+  if (!context) {
     return false;
   }
 
@@ -192,21 +173,10 @@ bool Playground::OpenPlaygroundHere(
       [&](auto position) { SetCursorPosition(position); });
   window_->SetWindowPosition({200, 200});
   window_->SetWindowSize(GetWindowSize());
-  window_->SetOnRenderFrameCallback([&]() {  return ShouldKeepRendering(); });
-
-  while (true) {
-#if FML_OS_MACOSX
-    AutoReleasePool pool;
-#endif
-
-    if (!renderer_->Render(impl_->AcquireSurfaceFrame(renderer_->GetContext()),
-                           render_callback)) {
-      VALIDATION_LOG << "Could not render into the surface.";
-      return false;
-    }
-  }
-
-  return true;
+  window_->SetOnRenderFrameCallback([&]() { return ShouldKeepRendering(); });
+  window_->SetSurfaceAcquireCallback(
+      [&]() { return impl_->AcquireSurfaceFrame(context); });
+  return window_->Render(*renderer_, render_callback);
 }
 
 bool Playground::OpenPlaygroundHere(SinglePassCallback pass_callback) {
