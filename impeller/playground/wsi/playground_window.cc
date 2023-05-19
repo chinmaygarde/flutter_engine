@@ -16,4 +16,16 @@ void PlaygroundWindow::SetResizeCallback(ResizeCallback callback) {
   resize_callback_ = std::move(callback);
 }
 
+void PlaygroundWindow::SetKeyCallback(KeyCallback callback) {
+  key_callback_ = std::move(callback);
+}
+
+void PlaygroundWindow::SetCursorCallback(CursorCallback callback) {
+  cursor_callback_ = std::move(callback);
+}
+
+void PlaygroundWindow::SetOnRenderFrameCallback(OnRenderCallback callback) {
+  on_render_frame_callback_ = std::move(callback);
+}
+
 }  // namespace impeller

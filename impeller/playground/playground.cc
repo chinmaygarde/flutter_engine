@@ -175,101 +175,36 @@ bool Playground::OpenPlaygroundHere(
   window_->SetWindowTitle(GetWindowTitle());
   window_->SetResizeCallback(
       [&](ISize window_size) { SetWindowSize(window_size); });
-
-  ::glfwSetKeyCallback(window, &PlaygroundKeyCallback);
-  ::glfwSetCursorPosCallback(window, [](GLFWwindow* window, double x,
-                                        double y) {
-    reinterpret_cast<Playground*>(::glfwGetWindowUserPointer(window))
-        ->SetCursorPosition({static_cast<Scalar>(x), static_cast<Scalar>(y)});
+  window_->SetKeyCallback([&](auto key, auto action, auto modifiers) {
+    if ((key == PlaygroundKeyCode::kEscape) &&
+        action == PlaygroundKeyAction::kRelease) {
+      uint64_t skip_mods = 0;
+      skip_mods |= static_cast<uint64_t>(PlaygroundKeyModifier::kControl);
+      skip_mods |= static_cast<uint64_t>(PlaygroundKeyModifier::kSuper);
+      skip_mods |= static_cast<uint64_t>(PlaygroundKeyModifier::kShift);
+      if (modifiers & skip_mods) {
+        gShouldOpenNewPlaygrounds = false;
+      }
+      window_->SetWindowShouldClose();
+    }
   });
-
-  ImGui_ImplGlfw_InitForOther(window, true);
-  fml::ScopedCleanupClosure shutdown_imgui([]() { ImGui_ImplGlfw_Shutdown(); });
-
-  ImGui_ImplImpeller_Init(renderer_->GetContext());
-  fml::ScopedCleanupClosure shutdown_imgui_impeller(
-      []() { ImGui_ImplImpeller_Shutdown(); });
-
-  ImGui::SetNextWindowPos({10, 10});
-
-  ::glfwSetWindowSize(window, GetWindowSize().width, GetWindowSize().height);
-  ::glfwSetWindowPos(window, 200, 100);
-  ::glfwShowWindow(window);
+  window_->SetCursorCallback(
+      [&](auto position) { SetCursorPosition(position); });
+  window_->SetWindowPosition({200, 200});
+  window_->SetWindowSize(GetWindowSize());
+  window_->SetOnRenderFrameCallback([&]() {  return ShouldKeepRendering(); });
 
   while (true) {
 #if FML_OS_MACOSX
     AutoReleasePool pool;
 #endif
-    ::glfwPollEvents();
-
-    if (::glfwWindowShouldClose(window)) {
-      return true;
-    }
-
-    ImGui_ImplGlfw_NewFrame();
-
-    Renderer::RenderCallback wrapped_callback =
-        [render_callback,
-         &renderer = renderer_](RenderTarget& render_target) -> bool {
-      ImGui::NewFrame();
-      ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(),
-                                   ImGuiDockNodeFlags_PassthruCentralNode);
-      bool result = render_callback(render_target);
-      ImGui::Render();
-
-      // Render ImGui overlay.
-      {
-        auto buffer = renderer->GetContext()->CreateCommandBuffer();
-        if (!buffer) {
-          return false;
-        }
-        buffer->SetLabel("ImGui Command Buffer");
-
-        if (render_target.GetColorAttachments().empty()) {
-          return false;
-        }
-
-        auto color0 = render_target.GetColorAttachments().find(0)->second;
-        color0.load_action = LoadAction::kLoad;
-        if (color0.resolve_texture) {
-          color0.texture = color0.resolve_texture;
-          color0.resolve_texture = nullptr;
-          color0.store_action = StoreAction::kStore;
-        }
-        render_target.SetColorAttachment(color0, 0);
-
-        render_target.SetStencilAttachment(std::nullopt);
-        render_target.SetDepthAttachment(std::nullopt);
-
-        auto pass = buffer->CreateRenderPass(render_target);
-        if (!pass) {
-          return false;
-        }
-        pass->SetLabel("ImGui Render Pass");
-
-        ImGui_ImplImpeller_RenderDrawData(ImGui::GetDrawData(), *pass);
-
-        pass->EncodeCommands();
-        if (!buffer->SubmitCommands()) {
-          return false;
-        }
-      }
-
-      return result;
-    };
 
     if (!renderer_->Render(impl_->AcquireSurfaceFrame(renderer_->GetContext()),
-                           wrapped_callback)) {
+                           render_callback)) {
       VALIDATION_LOG << "Could not render into the surface.";
       return false;
     }
-
-    if (!ShouldKeepRendering()) {
-      break;
-    }
   }
-
-  ::glfwHideWindow(window);
 
   return true;
 }

@@ -5,7 +5,9 @@
 #pragma once
 
 #include <functional>
+#include <utility>
 
+#include "flutter/fml/closure.h"
 #include "flutter/fml/macros.h"
 #include "impeller/geometry/size.h"
 #include "impeller/geometry/vector.h"
@@ -166,11 +168,27 @@ class PlaygroundWindow {
 
   virtual void SetWindowPosition(IPoint position) = 0;
 
+  virtual void SetWindowShouldClose() = 0;
+
   using ResizeCallback = std::function<void(ISize)>;
   void SetResizeCallback(ResizeCallback callback);
 
+  using KeyCallback = std::function<void(PlaygroundKeyCode code,
+                                         PlaygroundKeyAction action,
+                                         uint64_t modifiers)>;
+  void SetKeyCallback(KeyCallback callback);
+
+  using CursorCallback = std::function<void(Point)>;
+  void SetCursorCallback(CursorCallback callback);
+
+  using OnRenderCallback = std::function<bool(void)>;
+  void SetOnRenderFrameCallback(OnRenderCallback callback);
+
  protected:
   ResizeCallback resize_callback_;
+  KeyCallback key_callback_;
+  CursorCallback cursor_callback_;
+  OnRenderCallback on_render_frame_callback_;
 
  private:
   FML_DISALLOW_COPY_AND_ASSIGN(PlaygroundWindow);

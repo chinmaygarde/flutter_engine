@@ -5,23 +5,10 @@
 #include "impeller/playground/wsi/glfw/playground_window_glfw.h"
 
 #include <optional>
-
+#include "flutter/fml/logging.h"
 #include "impeller/base/validation.h"
 
 namespace impeller {
-
-static void PlaygroundKeyCallback(GLFWwindow* window,
-                                  int key,
-                                  int scancode,
-                                  int action,
-                                  int mods) {
-  if ((key == GLFW_KEY_ESCAPE) && action == GLFW_RELEASE) {
-    if (mods & (GLFW_MOD_CONTROL | GLFW_MOD_SUPER | GLFW_MOD_SHIFT)) {
-      gShouldOpenNewPlaygrounds = false;
-    }
-    ::glfwSetWindowShouldClose(window, GLFW_TRUE);
-  }
-}
 
 static std::optional<PlaygroundKeyAction> ToPlaygroundKeyAction(int action) {
   switch (action) {
@@ -35,23 +22,27 @@ static std::optional<PlaygroundKeyAction> ToPlaygroundKeyAction(int action) {
   return std::nullopt;
 }
 
-static std::optional<PlaygroundKeyModifier> ToPlaygroundKeyModifier(
-    int modifier) {
-  switch (modifier) {
-    case GLFW_MOD_SHIFT:
-      return PlaygroundKeyModifier::kShift;
-    case GLFW_MOD_CONTROL:
-      return PlaygroundKeyModifier::kControl;
-    case GLFW_MOD_ALT:
-      return PlaygroundKeyModifier::kAlt;
-    case GLFW_MOD_SUPER:
-      return PlaygroundKeyModifier::kSuper;
-    case GLFW_MOD_CAPS_LOCK:
-      return PlaygroundKeyModifier::kCapsLock;
-    case GLFW_MOD_NUM_LOCK:
-      return PlaygroundKeyModifier::kNumLock;
+static uint64_t ToPlaygroundKeyModifiers(int modifiers) {
+  uint64_t mods = 0u;
+  if (modifiers & GLFW_MOD_SHIFT) {
+    mods |= static_cast<uint64_t>(PlaygroundKeyModifier::kShift);
   }
-  return std::nullopt;
+  if (modifiers & GLFW_MOD_CONTROL) {
+    mods |= static_cast<uint64_t>(PlaygroundKeyModifier::kControl);
+  }
+  if (modifiers & GLFW_MOD_ALT) {
+    mods |= static_cast<uint64_t>(PlaygroundKeyModifier::kAlt);
+  }
+  if (modifiers & GLFW_MOD_SUPER) {
+    mods |= static_cast<uint64_t>(PlaygroundKeyModifier::kSuper);
+  }
+  if (modifiers & GLFW_MOD_CAPS_LOCK) {
+    mods |= static_cast<uint64_t>(PlaygroundKeyModifier::kCapsLock);
+  }
+  if (modifiers & GLFW_MOD_NUM_LOCK) {
+    mods |= static_cast<uint64_t>(PlaygroundKeyModifier::kNumLock);
+  }
+  return mods;
 }
 
 static std::optional<PlaygroundKeyCode> ToPlaygroundKeyCode(int keycode) {
@@ -352,7 +343,6 @@ PlaygroundWindowGLFW::PlaygroundWindowGLFW(PlaygroundWSIBackend backend)
     return;
   }
 
-  // Window is valid. Now set it up.
   switch (backend_) {
     case PlaygroundWSIBackend::kMetal:
     case PlaygroundWSIBackend::kOpenGLES:
@@ -371,6 +361,39 @@ PlaygroundWindowGLFW::PlaygroundWindowGLFW(PlaygroundWSIBackend backend)
         }
         if (thiz->resize_callback_) {
           thiz->resize_callback_(ISize{width, height}.Max({}));
+        }
+      });
+  ::glfwSetKeyCallback(window, [](GLFWwindow* window, int key, int scancode,
+                                  int action, int mods) {
+    auto playground_keycode = ToPlaygroundKeyCode(key);
+    auto playground_action = ToPlaygroundKeyAction(action);
+    auto playground_modifiers = ToPlaygroundKeyModifiers(mods);
+    if (!playground_keycode.has_value() || !playground_action.has_value()) {
+      VALIDATION_LOG << "Unknown playground key or action.";
+      return;
+    }
+    auto thiz = reinterpret_cast<PlaygroundWindowGLFW*>(
+        ::glfwGetWindowUserPointer(window));
+    if (!thiz) {
+      return;
+    }
+    if (thiz->key_callback_) {
+      thiz->key_callback_(playground_keycode.value(),  //
+                          playground_action.value(),   //
+                          playground_modifiers         //
+      );
+    }
+  });
+  ::glfwSetCursorPosCallback(
+      window, [](GLFWwindow* window, double x, double y) {
+        auto thiz = reinterpret_cast<PlaygroundWindowGLFW*>(
+            ::glfwGetWindowUserPointer(window));
+        if (!thiz) {
+          return;
+        }
+        if (thiz->cursor_callback_) {
+          thiz->cursor_callback_(
+              Point{static_cast<Scalar>(x), static_cast<Scalar>(y)});
         }
       });
 
@@ -426,6 +449,14 @@ void PlaygroundWindowGLFW::SetWindowTitle(const std::string& title) {
 
 void PlaygroundWindowGLFW::SetWindowSize(ISize size) {
   ::glfwSetWindowSize(window_, size.width, size.height);
+}
+
+void PlaygroundWindowGLFW::SetWindowPosition(IPoint position) {
+  ::glfwSetWindowPos(window_, position.x, position.y);
+}
+
+void PlaygroundWindowGLFW::SetWindowShouldClose() {
+  ::glfwWindowShouldClose(window_);
 }
 
 }  // namespace impeller

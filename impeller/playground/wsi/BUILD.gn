@@ -20,6 +20,8 @@ impeller_component("wsi") {
   ]
 
   deps = [
+    "../../renderer",
+    "//flutter/fml",
     "//third_party/glfw",
     "//third_party/imgui:imgui_glfw",
   ]
