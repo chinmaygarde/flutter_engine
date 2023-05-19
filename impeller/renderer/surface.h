@@ -26,6 +26,7 @@ class Surface {
 
   bool IsValid() const;
 
+  // TODO(csg): Rename to render target.
   const RenderTarget& GetTargetRenderPassDescriptor() const;
 
   virtual bool Present() const;

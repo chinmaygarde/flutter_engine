@@ -9,7 +9,6 @@
 
 #include "flutter/fml/closure.h"
 #include "flutter/fml/macros.h"
-#include "impeller/base/auto_release_pool.h"
 #include "impeller/geometry/size.h"
 #include "impeller/geometry/vector.h"
 #include "impeller/renderer/renderer.h"
@@ -191,25 +190,8 @@ class PlaygroundWindow {
   using SurfaceAcquireCallback = std::function<std::unique_ptr<Surface>(void)>;
   void SetSurfaceAcquireCallback(SurfaceAcquireCallback callback);
 
-  bool Render(const Renderer& renderer,
-              Renderer::RenderCallback render_callback) {
-    auto surface =
-        surface_acquire_callback_ ? surface_acquire_callback_() : nullptr;
-    if (!surface) {
-      return false;
-    }
-    Renderer::RenderCallback wrapped_render_callback = [render_callback](
-                                                           auto render_target) {
-      AutoReleasePool pool;
-      auto result = render_callback ? render_callback(render_target) : false;
-      if (!result) {
-        VALIDATION_LOG << "Could not render to surface.";
-        return false;
-      }
-      return true;
-    };
-    return renderer.Render(std::move(surface), wrapped_render_callback);
-  }
+  virtual bool Render(const Renderer& renderer,
+                      Renderer::RenderCallback render_callback) = 0;
 
  protected:
   ResizeCallback resize_callback_;

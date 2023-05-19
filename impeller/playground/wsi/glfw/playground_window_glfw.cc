@@ -459,4 +459,55 @@ void PlaygroundWindowGLFW::SetWindowShouldClose() {
   ::glfwWindowShouldClose(window_);
 }
 
+bool PlaygroundWindowGLFW::BeginNewImguiFrame() const {
+  ImGui_ImplGlfw_NewFrame();
+  ImGui::NewFrame();
+  ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(),
+                               ImGuiDockNodeFlags_PassthruCentralNode);
+  return true;
+}
+bool PlaygroundWindowGLFW::RenderImguiOverlay(
+    std::shared_ptr<impeller::Context> context,
+    RenderTarget& render_target) const {
+  // Ask ImGUI to prep it buffers for render.
+  ImGui::Render();
+  if (!context) {
+    return false;
+  }
+  auto buffer = context->CreateCommandBuffer();
+  if (!buffer) {
+    return false;
+  }
+  buffer->SetLabel("ImGui Command Buffer");
+
+  if (render_target.GetColorAttachments().empty()) {
+    return false;
+  }
+
+  auto color0 = render_target.GetColorAttachments().find(0)->second;
+  color0.load_action = LoadAction::kLoad;
+  if (color0.resolve_texture) {
+    color0.texture = color0.resolve_texture;
+    color0.resolve_texture = nullptr;
+    color0.store_action = StoreAction::kStore;
+  }
+  render_target.SetColorAttachment(color0, 0);
+
+  render_target.SetStencilAttachment(std::nullopt);
+  render_target.SetDepthAttachment(std::nullopt);
+
+  auto imgui_pass = buffer->CreateRenderPass(render_target);
+  if (!imgui_pass) {
+    return false;
+  }
+  imgui_pass->SetLabel("ImGui Render Pass");
+
+  ImGui_ImplImpeller_RenderDrawData(ImGui::GetDrawData(), *imgui_pass);
+
+  imgui_pass->EncodeCommands();
+  if (!buffer->SubmitCommands()) {
+    return false;
+  }
+  return true;
+}
 }  // namespace impeller

@@ -15,6 +15,7 @@
 #include "third_party/glfw/include/GLFW/glfw3.h"
 #define GLFW_EXPOSE_NATIVE_COCOA
 #include "impeller/base/auto_release_pool.h"
+#include "impeller/base/validation.h"
 #include "third_party/glfw/include/GLFW/glfw3native.h"
 #include "third_party/imgui/backends/imgui_impl_glfw.h"
 #include "third_party/imgui/imgui.h"
@@ -50,10 +51,12 @@ class PlaygroundWindowGLFW final : public PlaygroundWindow {
   using FunctionPointer = void (*)(void);
   FunctionPointer GetVulkanInstanceProcAddressPointer() const;
 
-  using OpenPlaygroundCallback = std::function<bool(RenderTarget&)>;
-  bool OnOpenPlaygroundHere(std::shared_ptr<impeller::Context> context,
-                            RenderTarget& render_target,
-                            OpenPlaygroundCallback callback) {
+  // |PlaygroundWindow|
+  bool Render(const Renderer& renderer,
+              Renderer::RenderCallback render_callback) override {
+    if (!render_callback) {
+      return false;
+    }
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     fml::ScopedCleanupClosure destroy_imgui_context(
@@ -71,7 +74,7 @@ class PlaygroundWindowGLFW final : public PlaygroundWindow {
         []() { ImGui_ImplGlfw_Shutdown(); });
 
     // Setup Impeller Imgui Hooks.
-    ImGui_ImplImpeller_Init(context);
+    ImGui_ImplImpeller_Init(renderer.GetContext());
     fml::ScopedCleanupClosure shutdown_imgui_impeller(
         []() { ImGui_ImplImpeller_Shutdown(); });
 
@@ -83,21 +86,37 @@ class PlaygroundWindowGLFW final : public PlaygroundWindow {
     ImGui::SetNextWindowPos({10, 10});
 
     while (true) {
-      AutoReleasePool pool;
+      AutoReleasePool frame_pool;
       ::glfwPollEvents();
-
       if (::glfwWindowShouldClose(window_)) {
         return true;
       }
-      if (!BeginNewImguiFrame()) {
+      auto surface =
+          surface_acquire_callback_ ? surface_acquire_callback_() : nullptr;
+      if (!surface) {
+        VALIDATION_LOG << "Could not acquire surface to render to.";
         return false;
       }
-      if (callback) {
-        if (!callback(render_target)) {
-          return false;
-        }
-      }
-      if (!RenderImguiOverlay(render_target)) {
+      // Renders the playground contents but also overlays the ImGui windows on
+      // top before rendering.
+      Renderer::RenderCallback wrapped_render_callback =
+          [&](RenderTarget& target) {
+            if (!BeginNewImguiFrame()) {
+              return false;
+            }
+            if (!render_callback(target)) {
+              VALIDATION_LOG
+                  << "Could not render playground contents to surface.";
+              return false;
+            }
+            if (!RenderImguiOverlay(target)) {
+              VALIDATION_LOG << "Could not render ImGui overlay to surface.";
+              return false;
+            }
+          };
+
+      if (!renderer.Render(std::move(surface), wrapped_render_callback)) {
+        VALIDATION_LOG << "Could not render playground contents to surface.";
         return false;
       }
       if (on_render_frame_callback_) {
@@ -106,7 +125,6 @@ class PlaygroundWindowGLFW final : public PlaygroundWindow {
         }
       }
     }
-
     return true;
   }
 
@@ -115,57 +133,10 @@ class PlaygroundWindowGLFW final : public PlaygroundWindow {
   GLFWwindow* window_ = nullptr;
   bool is_valid_ = false;
 
-  bool BeginNewImguiFrame() const {
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(),
-                                 ImGuiDockNodeFlags_PassthruCentralNode);
-    return true;
-  }
+  bool BeginNewImguiFrame() const;
 
   bool RenderImguiOverlay(std::shared_ptr<impeller::Context> context,
-                          RenderTarget& render_target) const {
-    // Ask ImGUI to prep it buffers for render.
-    ImGui::Render();
-    if (!context) {
-      return false;
-    }
-    auto buffer = context->CreateCommandBuffer();
-    if (!buffer) {
-      return false;
-    }
-    buffer->SetLabel("ImGui Command Buffer");
-
-    if (render_target.GetColorAttachments().empty()) {
-      return false;
-    }
-
-    auto color0 = render_target.GetColorAttachments().find(0)->second;
-    color0.load_action = LoadAction::kLoad;
-    if (color0.resolve_texture) {
-      color0.texture = color0.resolve_texture;
-      color0.resolve_texture = nullptr;
-      color0.store_action = StoreAction::kStore;
-    }
-    render_target.SetColorAttachment(color0, 0);
-
-    render_target.SetStencilAttachment(std::nullopt);
-    render_target.SetDepthAttachment(std::nullopt);
-
-    auto imgui_pass = buffer->CreateRenderPass(render_target);
-    if (!imgui_pass) {
-      return false;
-    }
-    imgui_pass->SetLabel("ImGui Render Pass");
-
-    ImGui_ImplImpeller_RenderDrawData(ImGui::GetDrawData(), *imgui_pass);
-
-    imgui_pass->EncodeCommands();
-    if (!buffer->SubmitCommands()) {
-      return false;
-    }
-    return true;
-  }
+                          RenderTarget& render_target) const;
 
   FML_DISALLOW_COPY_AND_ASSIGN(PlaygroundWindowGLFW);
 };
