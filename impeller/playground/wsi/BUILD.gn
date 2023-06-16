@@ -17,6 +17,7 @@ impeller_component("wsi") {
   sources += [
     "glfw/formats_glfw.cc",
     "glfw/formats_glfw.h",
+    "glfw/glfw.h",
     "glfw/playground_window_glfw.cc",
     "glfw/playground_window_glfw.h",
     "glfw/playground_wsi_glfw.cc",

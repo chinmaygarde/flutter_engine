@@ -7,7 +7,7 @@
 #include <optional>
 
 #include "impeller/playground/wsi/formats.h"
-#include "third_party/glfw/include/GLFW/glfw3.h"
+#include "impeller/playground/wsi/glfw/glfw.h"
 
 namespace impeller {
 

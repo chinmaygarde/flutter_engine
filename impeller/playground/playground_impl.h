@@ -15,6 +15,8 @@
 namespace impeller {
 
 class PlaygroundWindow;
+
+// TODO(csg): Rename this to PlaygroundBackend.
 class PlaygroundImpl {
  public:
   static std::unique_ptr<PlaygroundImpl> Create(PlaygroundBackend backend,

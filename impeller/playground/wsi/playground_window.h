@@ -22,7 +22,7 @@ class PlaygroundWindow {
  public:
   PlaygroundWindow();
 
-  ~PlaygroundWindow();
+  virtual ~PlaygroundWindow();
 
   virtual ISize GetSize() const = 0;
 

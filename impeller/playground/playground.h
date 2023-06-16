@@ -96,7 +96,6 @@ class Playground {
 
  private:
   fml::TimeDelta start_time_;
-  std::unique_ptr<PlaygroundWSI> wsi_;
   std::unique_ptr<PlaygroundImpl> impl_;
   std::unique_ptr<PlaygroundWindow> window_;
   std::shared_ptr<Context> context_;

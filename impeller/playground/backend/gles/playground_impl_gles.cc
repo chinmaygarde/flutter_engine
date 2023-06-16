@@ -41,8 +41,9 @@ class PlaygroundImplGLES::ReactorWorker final : public ReactorGLES::Worker {
   FML_DISALLOW_COPY_AND_ASSIGN(ReactorWorker);
 };
 
-PlaygroundImplGLES::PlaygroundImplGLES(PlaygroundSwitches switches)
-    : PlaygroundImpl(switches),
+PlaygroundImplGLES::PlaygroundImplGLES(PlaygroundSwitches switches,
+                                       std::unique_ptr<PlaygroundWindow> window)
+    : PlaygroundImpl(switches, std::move(window)),
       worker_(std::shared_ptr<ReactorWorker>(new ReactorWorker())) {
   // TODO(csg): Create the PlaygroundWindow here.
 

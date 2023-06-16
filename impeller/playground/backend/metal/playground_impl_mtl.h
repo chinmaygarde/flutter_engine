@@ -13,7 +13,8 @@ namespace impeller {
 
 class PlaygroundImplMTL final : public PlaygroundImpl {
  public:
-  explicit PlaygroundImplMTL(PlaygroundSwitches switches);
+  explicit PlaygroundImplMTL(PlaygroundSwitches switches,
+                             std::unique_ptr<PlaygroundWindow> window);
 
   ~PlaygroundImplMTL();
 

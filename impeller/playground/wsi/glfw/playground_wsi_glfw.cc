@@ -10,6 +10,7 @@
 #include "third_party/glfw/include/GLFW/glfw3.h"
 
 #include "flutter/fml/logging.h"
+#include "impeller/base/config.h"
 
 namespace impeller {
 
@@ -49,6 +50,8 @@ PlaygroundWSIGLFW::~PlaygroundWSIGLFW() = default;
 
 // |PlaygroundWSI|
 std::unique_ptr<PlaygroundWindow> PlaygroundWSIGLFW::CreateWindow(
-    PlaygroundWSIBackend backend) {}
+    PlaygroundWSIBackend backend) {
+  IMPELLER_UNIMPLEMENTED;
+}
 
 }  // namespace impeller

@@ -7,16 +7,12 @@
 #include <functional>
 
 #include "flutter/fml/macros.h"
+#include "impeller/base/auto_release_pool.h"
+#include "impeller/base/validation.h"
+#include "impeller/playground/wsi/glfw/glfw.h"
 #include "impeller/playground/wsi/playground_window.h"
 #include "impeller/playground/wsi/playground_wsi.h"
 #include "impeller/renderer/render_target.h"
-#define GLFW_INCLUDE_NONE
-#define GLFW_INCLUDE_VULKAN
-#include "third_party/glfw/include/GLFW/glfw3.h"
-#define GLFW_EXPOSE_NATIVE_COCOA
-#include "impeller/base/auto_release_pool.h"
-#include "impeller/base/validation.h"
-#include "third_party/glfw/include/GLFW/glfw3native.h"
 #include "third_party/imgui/backends/imgui_impl_glfw.h"
 #include "third_party/imgui/imgui.h"
 
@@ -26,7 +22,8 @@ class PlaygroundWindowGLFW final : public PlaygroundWindow {
  public:
   explicit PlaygroundWindowGLFW(PlaygroundWSIBackend backend);
 
-  ~PlaygroundWindowGLFW();
+  // |PlaygroundWindow|
+  ~PlaygroundWindowGLFW() override;
 
   bool IsValid() const;
 

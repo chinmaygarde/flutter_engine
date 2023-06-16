@@ -13,6 +13,7 @@
 #include "impeller/entity/mtl/modern_shaders.h"
 #include "impeller/fixtures/mtl/fixtures_shaders.h"
 #include "impeller/playground/imgui/mtl/imgui_shaders.h"
+#include "impeller/playground/wsi/glfw/glfw.h"
 #include "impeller/renderer/backend/metal/context_mtl.h"
 #include "impeller/renderer/backend/metal/formats_mtl.h"
 #include "impeller/renderer/backend/metal/surface_mtl.h"
@@ -47,8 +48,10 @@ ShaderLibraryMappingsForPlayground() {
   };
 }
 
-PlaygroundImplMTL::PlaygroundImplMTL(PlaygroundSwitches switches)
-    : PlaygroundImpl(switches), data_(std::make_unique<Data>()) {
+PlaygroundImplMTL::PlaygroundImplMTL(PlaygroundSwitches switches,
+                                     std::unique_ptr<PlaygroundWindow> window)
+    : PlaygroundImpl(switches, std::move(window)),
+      data_(std::make_unique<Data>()) {
   auto context = ContextMTL::Create(ShaderLibraryMappingsForPlayground(),
                                     "Playground Library");
   if (!context) {

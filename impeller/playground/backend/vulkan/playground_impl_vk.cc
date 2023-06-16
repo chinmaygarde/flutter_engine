@@ -11,6 +11,7 @@
 #include "impeller/entity/vk/modern_shaders_vk.h"
 #include "impeller/fixtures/vk/fixtures_shaders_vk.h"
 #include "impeller/playground/imgui/vk/imgui_shaders_vk.h"
+#include "impeller/playground/wsi/glfw/glfw.h"
 #include "impeller/renderer/backend/vulkan/context_vk.h"
 #include "impeller/renderer/backend/vulkan/formats_vk.h"
 #include "impeller/renderer/backend/vulkan/surface_vk.h"

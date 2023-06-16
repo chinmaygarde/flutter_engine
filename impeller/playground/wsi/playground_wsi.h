@@ -12,6 +12,7 @@ namespace impeller {
 
 class PlaygroundWindow;
 
+// TODO(csg): Merge.
 enum class PlaygroundWSIBackend {
   kMetal,
   kOpenGLES,

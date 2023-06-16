@@ -11,9 +11,11 @@ namespace impeller {
 
 class PlaygroundImplGLES final : public PlaygroundImpl {
  public:
-  explicit PlaygroundImplGLES(PlaygroundSwitches switches);
+  explicit PlaygroundImplGLES(PlaygroundSwitches switches,
+                              std::unique_ptr<PlaygroundWindow> window);
 
-  ~PlaygroundImplGLES();
+  // |PlaygroundImpl|
+  ~PlaygroundImplGLES() override;
 
  private:
   class ReactorWorker;
