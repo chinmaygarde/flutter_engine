@@ -69,7 +69,6 @@ PlaygroundImplMTL::PlaygroundImplMTL(PlaygroundSwitches switches,
   cocoa_window.contentView.layer = data_->metal_layer;
   cocoa_window.contentView.wantsLayer = YES;
 
-  handle_.reset(window);
   context_ = std::move(context);
 }
 
@@ -77,11 +76,6 @@ PlaygroundImplMTL::~PlaygroundImplMTL() = default;
 
 std::shared_ptr<Context> PlaygroundImplMTL::GetContext() const {
   return context_;
-}
-
-// |PlaygroundImpl|
-PlaygroundImpl::WindowHandle PlaygroundImplMTL::GetWindowHandle() const {
-  return handle_.get();
 }
 
 // |PlaygroundImpl|
