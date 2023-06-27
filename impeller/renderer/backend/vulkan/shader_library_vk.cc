@@ -135,7 +135,7 @@ bool ShaderLibraryVK::RegisterFunction(
   }
 
   if (!IsMappingSPIRV(*code)) {
-    VALIDATION_LOG << "Shader is not valid SPIRV.";
+    VALIDATION_LOG << "Shader is not valid SPIRV for Vulkan.";
     return false;
   }
 

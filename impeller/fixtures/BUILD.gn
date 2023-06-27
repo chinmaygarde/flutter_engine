@@ -59,7 +59,7 @@ impellerc("runtime_stages") {
     "runtime_stage_example.frag",
   ]
   sl_file_extension = "iplr"
-  shader_target_flag = "--runtime-stage-metal"
+  shader_target_flag = "--runtime-stage-vulkan"
   iplr = true
 }
 

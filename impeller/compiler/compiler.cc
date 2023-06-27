@@ -362,7 +362,8 @@ Compiler::Compiler(const std::shared_ptr<const fml::Mapping>& source_mapping,
   // If the target is Vulkan, our shading language is SPIRV which we already
   // have. We just need to strip it of debug information. If it isn't, we need
   // to invoke the appropriate compiler to compile the SPIRV to the target SL.
-  if (source_options.target_platform == TargetPlatform::kVulkan) {
+  if (source_options.target_platform == TargetPlatform::kVulkan ||
+      source_options.target_platform == TargetPlatform::kRuntimeStageVulkan) {
     auto stripped_spirv_options = spirv_options;
     stripped_spirv_options.generate_debug_info = false;
     sl_mapping_ = spv_compiler.CompileToSPV(

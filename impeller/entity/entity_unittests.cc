@@ -2096,7 +2096,8 @@ TEST_P(EntityTest, YUVToRGBFilter) {
 }
 
 TEST_P(EntityTest, RuntimeEffect) {
-  if (GetParam() != PlaygroundBackend::kMetal) {
+  if (GetBackend() != PlaygroundBackend::kMetal &&
+      GetBackend() != PlaygroundBackend::kVulkan) {
     GTEST_SKIP_("This backend doesn't support runtime effects.");
   }
 
