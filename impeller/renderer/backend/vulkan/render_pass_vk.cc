@@ -23,6 +23,7 @@
 #include "impeller/renderer/backend/vulkan/pipeline_vk.h"
 #include "impeller/renderer/backend/vulkan/sampler_vk.h"
 #include "impeller/renderer/backend/vulkan/shared_object_vk.h"
+#include "impeller/renderer/backend/vulkan/subpass_vk.h"
 #include "impeller/renderer/backend/vulkan/texture_vk.h"
 
 namespace impeller {
@@ -67,7 +68,7 @@ static vk::AttachmentDescription CreateAttachmentDescription(
   return attachment_desc;
 }
 
-SharedHandleVK<vk::RenderPass> RenderPassVK::CreateVKRenderPass(
+SharedHandleVK<vk::RenderPass> RenderPassVK::CreateRenderPassVK(
     const ContextVK& context) const {
   std::vector<vk::AttachmentDescription> attachments;
 
@@ -195,7 +196,7 @@ static std::vector<vk::ClearValue> GetVKClearValues(
   return clears;
 }
 
-SharedHandleVK<vk::Framebuffer> RenderPassVK::CreateVKFramebuffer(
+SharedHandleVK<vk::Framebuffer> RenderPassVK::CreateFramebufferVK(
     const ContextVK& context,
     const vk::RenderPass& pass) const {
   vk::FramebufferCreateInfo fb_info;
@@ -589,13 +590,13 @@ bool RenderPassVK::OnEncodeCommands(const Context& context) const {
 
   const auto& target_size = render_target_.GetRenderTargetSize();
 
-  auto render_pass = CreateVKRenderPass(vk_context);
+  auto render_pass = CreateRenderPassVK(vk_context);
   if (!render_pass) {
     VALIDATION_LOG << "Could not create renderpass.";
     return false;
   }
 
-  auto framebuffer = CreateVKFramebuffer(vk_context, *render_pass);
+  auto framebuffer = CreateFramebufferVK(vk_context, *render_pass);
   if (!framebuffer) {
     VALIDATION_LOG << "Could not create framebuffer.";
     return false;

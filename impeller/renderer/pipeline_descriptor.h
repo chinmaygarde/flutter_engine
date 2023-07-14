@@ -8,6 +8,7 @@
 #include <future>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -56,6 +57,8 @@ class PipelineDescriptor final : public Comparable<PipelineDescriptor> {
   const std::shared_ptr<VertexDescriptor>& GetVertexDescriptor() const;
 
   size_t GetMaxColorAttacmentBindIndex() const;
+
+  std::set<size_t> GetInputAttachmentIndices() const;
 
   PipelineDescriptor& SetColorAttachmentDescriptor(
       size_t index,
@@ -140,6 +143,7 @@ class PipelineDescriptor final : public Comparable<PipelineDescriptor> {
   std::map<size_t /* index */, ColorAttachmentDescriptor>
       color_attachment_descriptors_;
   std::shared_ptr<VertexDescriptor> vertex_descriptor_;
+  bool introduces_subpass_ = false;
   PixelFormat depth_pixel_format_ = PixelFormat::kUnknown;
   PixelFormat stencil_pixel_format_ = PixelFormat::kUnknown;
   std::optional<DepthAttachmentDescriptor> depth_attachment_descriptor_;

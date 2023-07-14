@@ -406,7 +406,7 @@ bool CapabilitiesVK::SupportsTextureToTextureBlits() const {
 
 // |Capabilities|
 bool CapabilitiesVK::SupportsFramebufferFetch() const {
-  return false;
+  return true;
 }
 
 // |Capabilities|

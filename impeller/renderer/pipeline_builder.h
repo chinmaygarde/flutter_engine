@@ -66,15 +66,21 @@ struct PipelineBuilder {
     {
       auto vertex_function = context.GetShaderLibrary()->GetFunction(
           VertexShader::kEntrypointName, ShaderStage::kVertex);
+
+      if (!vertex_function) {
+        VALIDATION_LOG << "Could not resolve pipeline entrypoint '"
+                       << VertexShader::kEntrypointName
+                       << "' in vertex stage of " << VertexShader::kLabel;
+        return false;
+      }
+
       auto fragment_function = context.GetShaderLibrary()->GetFunction(
           FragmentShader::kEntrypointName, ShaderStage::kFragment);
 
-      if (!vertex_function || !fragment_function) {
-        VALIDATION_LOG << "Could not resolve pipeline entrypoint(s) '"
-                       << VertexShader::kEntrypointName << "' and '"
+      if (!fragment_function) {
+        VALIDATION_LOG << "Could not resolve pipeline entrypoint '"
                        << FragmentShader::kEntrypointName
-                       << "' for pipeline named '" << VertexShader::kLabel
-                       << "'.";
+                       << "' in fragment stage of " << FragmentShader::kLabel;
         return false;
       }
 

@@ -1479,7 +1479,7 @@ TEST_P(AiksTest, ColorWheel) {
   auto callback = [&](AiksContext& renderer, RenderTarget& render_target) {
     // UI state.
     static bool cache_the_wheel = true;
-    static int current_blend_index = 3;
+    static int current_blend_index = 14;
     static float dst_alpha = 1;
     static float src_alpha = 1;
     static Color color0 = Color::Red();

@@ -26,6 +26,7 @@ static vk::UniqueDescriptorPool CreatePool(const vk::Device& device,
       {vk::DescriptorType::eStorageBuffer, pool_count},
       {vk::DescriptorType::eSampledImage, pool_count},
       {vk::DescriptorType::eSampler, pool_count},
+      {vk::DescriptorType::eInputAttachment, pool_count},
   };
 
   vk::DescriptorPoolCreateInfo pool_info;

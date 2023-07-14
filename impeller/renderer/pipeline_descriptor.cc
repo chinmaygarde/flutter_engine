@@ -92,6 +92,8 @@ PipelineDescriptor& PipelineDescriptor::AddStageEntrypoint(
 PipelineDescriptor& PipelineDescriptor::SetVertexDescriptor(
     std::shared_ptr<VertexDescriptor> vertex_descriptor) {
   vertex_descriptor_ = std::move(vertex_descriptor);
+  introduces_subpass_ =
+      vertex_descriptor_ ? vertex_descriptor_->IntroducesSubpass() : false;
   return *this;
 }
 
@@ -101,6 +103,13 @@ size_t PipelineDescriptor::GetMaxColorAttacmentBindIndex() const {
     max = std::max(color.first, max);
   }
   return max;
+}
+
+std::set<size_t> PipelineDescriptor::GetInputAttachmentIndices() const {
+  if (!vertex_descriptor_) {
+    return {};
+  }
+  return vertex_descriptor_->GetInputAttachmentIndices();
 }
 
 PipelineDescriptor& PipelineDescriptor::SetColorAttachmentDescriptor(

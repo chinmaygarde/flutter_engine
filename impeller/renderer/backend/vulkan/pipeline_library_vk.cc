@@ -77,49 +77,76 @@ static vk::AttachmentDescription CreatePlaceholderAttachmentDescription(
 ///
 static vk::UniqueRenderPass CreateRenderPass(const vk::Device& device,
                                              const PipelineDescriptor& desc) {
-  std::vector<vk::AttachmentDescription> attachments;
+  // There is an indirection between attachments and references to attachments.
+  std::vector<vk::AttachmentDescription> all_attachments;
+
+  //----------------------------------------------------------------------------
+  /// Figure out the color attachments.
+  ///
 
   std::vector<vk::AttachmentReference> color_refs;
-  vk::AttachmentReference depth_stencil_ref = kUnusedAttachmentReference;
+  PixelFormat color_format = PixelFormat::kUnknown;
+  const auto sample_count = desc.GetSampleCount();
 
   color_refs.resize(desc.GetMaxColorAttacmentBindIndex() + 1,
                     kUnusedAttachmentReference);
 
-  const auto sample_count = desc.GetSampleCount();
-
   for (const auto& [bind_point, color] : desc.GetColorAttachmentDescriptors()) {
     color_refs[bind_point] =
-        vk::AttachmentReference{static_cast<uint32_t>(attachments.size()),
+        vk::AttachmentReference{static_cast<uint32_t>(all_attachments.size()),
                                 vk::ImageLayout::eColorAttachmentOptimal};
-    attachments.emplace_back(
+    all_attachments.emplace_back(
         CreatePlaceholderAttachmentDescription(color.format, sample_count));
+    color_format = color.format;
   }
 
+  //----------------------------------------------------------------------------
+  /// Figure out the input attachments (to support stuff like subpassLoad).
+  ///
+
+  std::vector<vk::AttachmentReference> input_refs;
+  if (const auto input_indices = desc.GetInputAttachmentIndices();
+      !input_indices.empty()) {
+    input_refs.resize(input_indices.size(), kUnusedAttachmentReference);
+    for (const auto& input_index : input_indices) {
+      input_refs[input_index] =
+          vk::AttachmentReference{static_cast<uint32_t>(all_attachments.size()),
+                                  vk::ImageLayout::eShaderReadOnlyOptimal};
+      all_attachments.emplace_back(
+          CreatePlaceholderAttachmentDescription(color_format, sample_count));
+    }
+  }
+
+  //----------------------------------------------------------------------------
+  /// Figure out depth stencil attachment.
+  ///
+
+  vk::AttachmentReference depth_stencil_ref = kUnusedAttachmentReference;
   if (auto depth = desc.GetDepthStencilAttachmentDescriptor();
       depth.has_value()) {
     depth_stencil_ref = vk::AttachmentReference{
-        static_cast<uint32_t>(attachments.size()),
+        static_cast<uint32_t>(all_attachments.size()),
         vk::ImageLayout::eDepthStencilAttachmentOptimal};
-    attachments.emplace_back(CreatePlaceholderAttachmentDescription(
+    all_attachments.emplace_back(CreatePlaceholderAttachmentDescription(
         desc.GetDepthPixelFormat(), sample_count));
   }
   if (desc.HasStencilAttachmentDescriptors()) {
     depth_stencil_ref = vk::AttachmentReference{
-        static_cast<uint32_t>(attachments.size()),
+        static_cast<uint32_t>(all_attachments.size()),
         vk::ImageLayout::eDepthStencilAttachmentOptimal};
-    attachments.emplace_back(CreatePlaceholderAttachmentDescription(
+    all_attachments.emplace_back(CreatePlaceholderAttachmentDescription(
         desc.GetStencilPixelFormat(), sample_count));
   }
 
   vk::SubpassDescription subpass_desc;
   subpass_desc.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
   subpass_desc.setColorAttachments(color_refs);
+  subpass_desc.setInputAttachments(input_refs);
   subpass_desc.setPDepthStencilAttachment(&depth_stencil_ref);
 
   vk::RenderPassCreateInfo render_pass_desc;
-  render_pass_desc.setAttachments(attachments);
-  render_pass_desc.setPSubpasses(&subpass_desc);
-  render_pass_desc.setSubpassCount(1u);
+  render_pass_desc.setAttachments(all_attachments);
+  render_pass_desc.setSubpasses(subpass_desc);
 
   auto [result, pass] = device.createRenderPassUnique(render_pass_desc);
   if (result != vk::Result::eSuccess) {
@@ -333,13 +360,13 @@ std::unique_ptr<PipelineVK> PipelineLibraryVK::CreatePipeline(
   }
 
   auto render_pass = CreateRenderPass(strong_device->GetDevice(), desc);
-  if (render_pass) {
-    pipeline_info.setBasePipelineHandle(VK_NULL_HANDLE);
-    pipeline_info.setSubpass(0);
-    pipeline_info.setRenderPass(render_pass.get());
-  } else {
+  if (!render_pass) {
     return nullptr;
   }
+
+  pipeline_info.setBasePipelineHandle(VK_NULL_HANDLE);
+  pipeline_info.setSubpass(0);
+  pipeline_info.setRenderPass(render_pass.get());
 
   //----------------------------------------------------------------------------
   /// Vertex Input Setup

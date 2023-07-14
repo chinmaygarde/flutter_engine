@@ -9,7 +9,7 @@
 #include <impeller/texture.glsl>
 #include <impeller/types.glsl>
 
-#ifdef IMPELLER_TARGET_METAL
+#if defined(IMPELLER_TARGET_METAL) || defined(IMPELLER_TARGET_VULKAN)
 layout(set = 0,
        binding = 0,
        input_attachment_index = 0) uniform subpassInput uSub;

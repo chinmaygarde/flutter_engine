@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <set>
 #include <vector>
 
 #include "flutter/fml/macros.h"
@@ -57,6 +58,10 @@ class VertexDescriptor final : public Comparable<VertexDescriptor> {
   const std::vector<ShaderStageBufferLayout>& GetStageLayouts() const;
 
   const std::vector<DescriptorSetLayout>& GetDescriptorSetLayouts() const;
+
+  std::set<size_t> GetInputAttachmentIndices() const;
+
+  bool IntroducesSubpass() const;
 
   // |Comparable<VertexDescriptor>|
   std::size_t GetHash() const override;

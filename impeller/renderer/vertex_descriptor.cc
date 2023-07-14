@@ -4,6 +4,8 @@
 
 #include "impeller/renderer/vertex_descriptor.h"
 
+#include <algorithm>
+
 namespace impeller {
 
 VertexDescriptor::VertexDescriptor() = default;
@@ -63,6 +65,25 @@ const std::vector<ShaderStageBufferLayout>& VertexDescriptor::GetStageLayouts()
 const std::vector<DescriptorSetLayout>&
 VertexDescriptor::GetDescriptorSetLayouts() const {
   return desc_set_layouts_;
+}
+
+std::set<size_t> VertexDescriptor::GetInputAttachmentIndices() const {
+  std::set<size_t> indices;
+  for (const auto& set_layout : desc_set_layouts_) {
+    if (auto input_index = set_layout.GetInputAttachmentIndexIfValid();
+        input_index.has_value()) {
+      indices.insert(input_index.value());
+    }
+  }
+  return indices;
+}
+
+bool VertexDescriptor::IntroducesSubpass() const {
+  return std::any_of(
+      desc_set_layouts_.begin(), desc_set_layouts_.end(),
+      [](const auto& layout) {
+        return layout.GetInputAttachmentIndexIfValid().has_value();
+      });
 }
 
 }  // namespace impeller
