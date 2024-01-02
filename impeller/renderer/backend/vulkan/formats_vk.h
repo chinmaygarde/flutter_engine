@@ -6,7 +6,9 @@
 #define FLUTTER_IMPELLER_RENDERER_BACKEND_VULKAN_FORMATS_VK_H_
 
 #include <cstdint>
+#include <ostream>
 
+#include "flutter/fml/hash_combine.h"
 #include "flutter/fml/macros.h"
 #include "impeller/base/validation.h"
 #include "impeller/core/formats.h"
@@ -665,6 +667,49 @@ constexpr vk::ImageAspectFlags ToImageAspectFlags(PixelFormat format) {
   FML_UNREACHABLE();
 }
 
+struct SubpassIndexVK {
+  size_t index = 0u;
+  size_t count = 1u;
+
+  constexpr SubpassIndexVK() = default;
+
+  constexpr SubpassIndexVK(size_t p_index, size_t p_count)
+      : index(p_index), count(p_count) {}
+
+  constexpr bool IsValid() const { return index < count; }
+
+  constexpr bool IsFinalSubpass() const { return index == count - 1u; }
+
+  constexpr bool operator==(const SubpassIndexVK& o) const {
+    return index == o.index && count == o.count;
+  }
+
+  struct Hash {
+    constexpr std::size_t operator()(const SubpassIndexVK& o) const {
+      return fml::HashCombine(o.index, o.count);
+    }
+  };
+
+  struct Equal {
+    constexpr bool operator()(const SubpassIndexVK& lhs,
+                              const SubpassIndexVK& rhs) const {
+      return lhs.index == rhs.index && lhs.count == rhs.count;
+    }
+  };
+};
+
+static constexpr auto kLoneSubpassIndex = SubpassIndexVK{};
+
 }  // namespace impeller
+
+namespace std {
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const impeller::SubpassIndexVK& i) {
+  out << "{" << i.index << ", " << i.count << "}";
+  return out;
+}
+
+}  // namespace std
 
 #endif  // FLUTTER_IMPELLER_RENDERER_BACKEND_VULKAN_FORMATS_VK_H_
