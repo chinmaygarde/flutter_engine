@@ -678,6 +678,8 @@ struct SubpassCursorVK {
 
   constexpr bool IsValid() const { return index < count; }
 
+  constexpr bool IsLoneSubpass() const { return index == 0u && count == 1u; }
+
   constexpr bool IsFinalSubpass() const { return index == count - 1u; }
 
   constexpr bool operator==(const SubpassCursorVK& o) const {

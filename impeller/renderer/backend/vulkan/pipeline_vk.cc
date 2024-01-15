@@ -544,4 +544,18 @@ PipelineVK::CreateOrGetVariantForSubpass(SubpassCursorVK cursor) const {
   return future;
 }
 
+void PipelineVK::PreloadPipelineForSubpassCursor(SubpassCursorVK cursor) const {
+  if (subpass_cursor_ == cursor) {
+    return;
+  }
+  // Create a future but don't await on it. The task has been enqueued.
+  CreateOrGetVariantForSubpass(cursor);
+}
+
+bool PipelineVK::HasPreloadedPipelineForSubpassCursor(
+    SubpassCursorVK cursor) const {
+  Lock lock(subpass_pipelines_mutex_);
+  return subpass_pipelines_.find(cursor) != subpass_pipelines_.end();
+}
+
 }  // namespace impeller

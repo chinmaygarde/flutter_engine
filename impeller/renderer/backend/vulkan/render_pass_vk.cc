@@ -4,6 +4,7 @@
 
 #include "impeller/renderer/backend/vulkan/render_pass_vk.h"
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <numeric>
@@ -414,6 +415,25 @@ static bool ShouldAdvanceSubpass(const Command& command, size_t command_index) {
   return true;
 }
 
+static void PreloadSubpassPipelineForCommandStream(
+    const std::vector<Command>& commands,
+    size_t subpass_count) {
+  if (subpass_count <= 1u) {
+    return;
+  }
+  size_t subpass_index = 0u;
+  for (size_t command_index = 0; command_index < commands.size();
+       command_index++) {
+    const auto& command = commands[command_index];
+    if (ShouldAdvanceSubpass(command, command_index)) {
+      subpass_index++;
+    }
+    PipelineVK::Cast(*command.pipeline)
+        .PreloadPipelineForSubpassCursor(
+            SubpassCursorVK{subpass_index, subpass_count});
+  }
+}
+
 bool RenderPassVK::OnEncodeCommands(const Context& context) const {
   TRACE_EVENT0("impeller", "RenderPassVK::OnEncodeCommands");
   if (!IsValid()) {
@@ -457,6 +477,8 @@ bool RenderPassVK::OnEncodeCommands(const Context& context) const {
 
   SubpassCursorVK subpass_cursor;
   subpass_cursor.count = CountSubpassesForCommandStream(commands_);
+
+  PreloadSubpassPipelineForCommandStream(commands_, subpass_cursor.count);
 
   auto render_pass =
       CreateVKRenderPass(vk_context, command_buffer, subpass_cursor.count);
@@ -509,6 +531,10 @@ bool RenderPassVK::OnEncodeCommands(const Context& context) const {
         encoder->GetCommandBuffer().nextSubpass(vk::SubpassContents::eInline);
       }
       FML_DCHECK(subpass_cursor.IsValid());
+      FML_DCHECK(PipelineVK::Cast(*command.pipeline)
+                     .HasPreloadedPipelineForSubpassCursor(subpass_cursor))
+          << "Insufficient subpass pipeline preloading. Functionally correct "
+             "but misses using available concurrency.";
       if (!EncodeCommand(context,                   //
                          command,                   //
                          *encoder,                  //
