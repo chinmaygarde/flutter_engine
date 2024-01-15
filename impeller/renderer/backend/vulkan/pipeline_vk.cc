@@ -4,6 +4,7 @@
 
 #include "impeller/renderer/backend/vulkan/pipeline_vk.h"
 
+#include "flutter/fml/make_copyable.h"
 #include "flutter/fml/trace_event.h"
 #include "impeller/base/timing.h"
 #include "impeller/renderer/backend/vulkan/capabilities_vk.h"
@@ -493,12 +494,7 @@ vk::Pipeline PipelineVK::GetPipeline(SubpassCursorVK cursor) const {
   if (subpass_cursor_ == cursor) {
     return *pipeline_;
   }
-
-  auto subpass_pipeline = CreateOrGetVariantForSubpass(cursor);
-  if (!subpass_pipeline) {
-    return {};
-  }
-  return subpass_pipeline->GetPipeline(cursor);
+  return CreateOrGetVariantForSubpass(cursor).get()->GetPipeline(cursor);
 }
 
 const vk::PipelineLayout& PipelineVK::GetPipelineLayout() const {
@@ -509,22 +505,43 @@ const vk::DescriptorSetLayout& PipelineVK::GetDescriptorSetLayout() const {
   return *descriptor_set_layout_;
 }
 
-std::shared_ptr<PipelineVK> PipelineVK::CreateOrGetVariantForSubpass(
-    SubpassCursorVK subpass_cursor) const {
+std::shared_future<std::shared_ptr<PipelineVK>>
+PipelineVK::CreateOrGetVariantForSubpass(SubpassCursorVK cursor) const {
   Lock lock(subpass_pipelines_mutex_);
-  auto found = subpass_pipelines_.find(subpass_cursor);
+  auto found = subpass_pipelines_.find(cursor);
   if (found != subpass_pipelines_.end()) {
     return found->second;
   }
-  TRACE_EVENT0("impeller", "CreateSubpassPipelineVariant");
-  auto pipeline =
-      std::shared_ptr<PipelineVK>(PipelineVK::Create(desc_,                  //
-                                                     device_holder_.lock(),  //
-                                                     library_,               //
-                                                     subpass_cursor          //
-                                                     ));
-  subpass_pipelines_[subpass_cursor] = pipeline;
-  return pipeline;
+  std::promise<std::shared_ptr<PipelineVK>> promise;
+  auto future =
+      std::shared_future<std::shared_ptr<PipelineVK>>{promise.get_future()};
+  subpass_pipelines_[cursor] = future;
+
+  auto task = [promise = std::move(promise),  //
+               desc = desc_,                  //
+               device = device_holder_,       //
+               library = library_,            //
+               cursor                         //
+  ]() mutable {
+    TRACE_EVENT0("impeller", "CreateSubpassPipelineVariantAsync");
+    auto pipeline = PipelineVK::Create(desc,           //
+                                       device.lock(),  //
+                                       library,        //
+                                       cursor          //
+    );
+    promise.set_value(std::shared_ptr<PipelineVK>{std::move(pipeline)});
+  };
+
+  auto library = library_.lock();
+  if (!library) {
+    promise.set_value(nullptr);
+    return future;
+  }
+
+  PipelineLibraryVK::Cast(*library).GetWorkerTaskRunner()->PostTask(
+      fml::MakeCopyable(std::move(task)));
+
+  return future;
 }
 
 }  // namespace impeller

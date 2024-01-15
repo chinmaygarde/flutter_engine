@@ -276,4 +276,9 @@ const std::shared_ptr<PipelineCacheVK>& PipelineLibraryVK::GetPSOCache() const {
   return pso_cache_;
 }
 
+const std::shared_ptr<fml::ConcurrentTaskRunner>&
+PipelineLibraryVK::GetWorkerTaskRunner() const {
+  return worker_task_runner_;
+}
+
 }  // namespace impeller

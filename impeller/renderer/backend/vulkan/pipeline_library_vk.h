@@ -34,6 +34,8 @@ class PipelineLibraryVK final
 
   const std::shared_ptr<PipelineCacheVK>& GetPSOCache() const;
 
+  const std::shared_ptr<fml::ConcurrentTaskRunner>& GetWorkerTaskRunner() const;
+
  private:
   friend ContextVK;
 

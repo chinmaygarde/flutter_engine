@@ -40,10 +40,11 @@ class PipelineVK final
  private:
   friend class PipelineLibraryVK;
 
-  using SubpassPipelines = std::unordered_map<SubpassCursorVK,
-                                              std::shared_ptr<PipelineVK>,
-                                              SubpassCursorVK::Hash,
-                                              SubpassCursorVK::Equal>;
+  using SubpassPipelines =
+      std::unordered_map<SubpassCursorVK,
+                         std::shared_future<std::shared_ptr<PipelineVK>>,
+                         SubpassCursorVK::Hash,
+                         SubpassCursorVK::Equal>;
 
   std::weak_ptr<DeviceHolder> device_holder_;
   vk::UniquePipeline pipeline_;
@@ -73,8 +74,8 @@ class PipelineVK final
 
   PipelineVK& operator=(const PipelineVK&) = delete;
 
-  std::shared_ptr<PipelineVK> CreateOrGetVariantForSubpass(
-      SubpassCursorVK subpass_cursor) const;
+  std::shared_future<std::shared_ptr<PipelineVK>> CreateOrGetVariantForSubpass(
+      SubpassCursorVK cursor) const;
 };
 
 }  // namespace impeller
