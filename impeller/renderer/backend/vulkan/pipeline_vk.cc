@@ -544,7 +544,7 @@ PipelineVK::CreateOrGetVariantForSubpass(SubpassCursorVK cursor) const {
   return future;
 }
 
-void PipelineVK::PreloadPipelineForSubpassCursor(SubpassCursorVK cursor) const {
+void PipelineVK::PreloadPipeline(SubpassCursorVK cursor) const {
   if (subpass_cursor_ == cursor) {
     return;
   }
@@ -552,8 +552,7 @@ void PipelineVK::PreloadPipelineForSubpassCursor(SubpassCursorVK cursor) const {
   CreateOrGetVariantForSubpass(cursor);
 }
 
-bool PipelineVK::HasPreloadedPipelineForSubpassCursor(
-    SubpassCursorVK cursor) const {
+bool PipelineVK::HasPreloadedPipeline(SubpassCursorVK cursor) const {
   Lock lock(subpass_pipelines_mutex_);
   return subpass_pipelines_.find(cursor) != subpass_pipelines_.end();
 }

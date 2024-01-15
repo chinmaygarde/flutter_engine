@@ -429,8 +429,7 @@ static void PreloadSubpassPipelineForCommandStream(
       subpass_index++;
     }
     PipelineVK::Cast(*command.pipeline)
-        .PreloadPipelineForSubpassCursor(
-            SubpassCursorVK{subpass_index, subpass_count});
+        .PreloadPipeline(SubpassCursorVK{subpass_index, subpass_count});
   }
 }
 
@@ -532,7 +531,7 @@ bool RenderPassVK::OnEncodeCommands(const Context& context) const {
       }
       FML_DCHECK(subpass_cursor.IsValid());
       FML_DCHECK(PipelineVK::Cast(*command.pipeline)
-                     .HasPreloadedPipelineForSubpassCursor(subpass_cursor))
+                     .HasPreloadedPipeline(subpass_cursor))
           << "Insufficient subpass pipeline preloading. Functionally correct "
              "but misses using available concurrency.";
       if (!EncodeCommand(context,                   //

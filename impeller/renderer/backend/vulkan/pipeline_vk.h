@@ -31,11 +31,11 @@ class PipelineVK final
   // |Pipeline|
   ~PipelineVK() override;
 
-  void PreloadPipelineForSubpassCursor(SubpassCursorVK cursor) const;
+  void PreloadPipeline(SubpassCursorVK cursor) const;
 
-  bool HasPreloadedPipelineForSubpassCursor(SubpassCursorVK cursor) const;
+  bool HasPreloadedPipeline(SubpassCursorVK cursor) const;
 
-  vk::Pipeline GetPipeline(SubpassCursorVK subpass_cursor) const;
+  vk::Pipeline GetPipeline(SubpassCursorVK cursor) const;
 
   const vk::PipelineLayout& GetPipelineLayout() const;
 
