@@ -171,7 +171,7 @@ std::unique_ptr<PipelineVK> PipelineVK::Create(
     const PipelineDescriptor& desc,
     const std::shared_ptr<DeviceHolder>& device_holder,
     std::weak_ptr<PipelineLibrary> weak_library,
-    SubpassIndexVK subpass_index) {
+    SubpassCursorVK subpass_cursor) {
   TRACE_EVENT0("flutter", "PipelineVK::Create");
 
   auto library = weak_library.lock();
@@ -182,9 +182,9 @@ std::unique_ptr<PipelineVK> PipelineVK::Create(
 
   // There seems to be no validation error for this simple error. And this
   // condition is easy to get into if the right subpass steps are not added.
-  if (!subpass_index.IsValid()) {
-    VALIDATION_LOG << "Subpass index for pipeline creation was invalid: "
-                   << subpass_index;
+  if (!subpass_cursor.IsValid()) {
+    VALIDATION_LOG << "Subpass cursor for pipeline creation was invalid: "
+                   << subpass_cursor;
     return nullptr;
   }
 
@@ -318,7 +318,7 @@ std::unique_ptr<PipelineVK> PipelineVK::Create(
   auto render_pass =
       CreateCompatRenderPassForPipeline(device_holder->GetDevice(),  //
                                         desc,                        //
-                                        subpass_index.count          //
+                                        subpass_cursor.count         //
       );
 
   if (!render_pass) {
@@ -330,7 +330,7 @@ std::unique_ptr<PipelineVK> PipelineVK::Create(
   // by drivers for cache hits. Instead, the PSO cache is the preferred
   // mechanism.
   pipeline_info.setBasePipelineHandle(VK_NULL_HANDLE);
-  pipeline_info.setSubpass(subpass_index.index);
+  pipeline_info.setSubpass(subpass_cursor.index);
   pipeline_info.setRenderPass(render_pass.get());
 
   //----------------------------------------------------------------------------
@@ -449,7 +449,7 @@ std::unique_ptr<PipelineVK> PipelineVK::Create(
       std::move(render_pass),            //
       std::move(pipeline_layout.value),  //
       std::move(descs_layout),           //
-      subpass_index                      //
+      subpass_cursor                     //
       ));
   if (!pipeline_vk->IsValid()) {
     VALIDATION_LOG << "Could not create a valid pipeline.";
@@ -465,14 +465,14 @@ PipelineVK::PipelineVK(std::weak_ptr<DeviceHolder> device_holder,
                        vk::UniqueRenderPass render_pass,
                        vk::UniquePipelineLayout layout,
                        vk::UniqueDescriptorSetLayout descriptor_set_layout,
-                       SubpassIndexVK subpass_index)
+                       SubpassCursorVK subpass_cursor)
     : Pipeline(std::move(library), desc),
       device_holder_(std::move(device_holder)),
       pipeline_(std::move(pipeline)),
       render_pass_(std::move(render_pass)),
       layout_(std::move(layout)),
       descriptor_set_layout_(std::move(descriptor_set_layout)),
-      subpass_index_(subpass_index) {
+      subpass_cursor_(subpass_cursor) {
   is_valid_ = pipeline_ && render_pass_ && layout_ && descriptor_set_layout_;
 }
 
@@ -489,16 +489,16 @@ bool PipelineVK::IsValid() const {
   return is_valid_;
 }
 
-vk::Pipeline PipelineVK::GetPipeline(SubpassIndexVK subpass_index) const {
-  if (subpass_index_ == subpass_index) {
+vk::Pipeline PipelineVK::GetPipeline(SubpassCursorVK cursor) const {
+  if (subpass_cursor_ == cursor) {
     return *pipeline_;
   }
 
-  auto subpass_pipeline = CreateOrGetVariantForSubpassCount(subpass_index);
+  auto subpass_pipeline = CreateOrGetVariantForSubpass(cursor);
   if (!subpass_pipeline) {
     return {};
   }
-  return subpass_pipeline->GetPipeline(subpass_index);
+  return subpass_pipeline->GetPipeline(cursor);
 }
 
 const vk::PipelineLayout& PipelineVK::GetPipelineLayout() const {
@@ -509,10 +509,10 @@ const vk::DescriptorSetLayout& PipelineVK::GetDescriptorSetLayout() const {
   return *descriptor_set_layout_;
 }
 
-std::shared_ptr<PipelineVK> PipelineVK::CreateOrGetVariantForSubpassCount(
-    SubpassIndexVK subpass_index) const {
+std::shared_ptr<PipelineVK> PipelineVK::CreateOrGetVariantForSubpass(
+    SubpassCursorVK subpass_cursor) const {
   Lock lock(subpass_pipelines_mutex_);
-  auto found = subpass_pipelines_.find(subpass_index);
+  auto found = subpass_pipelines_.find(subpass_cursor);
   if (found != subpass_pipelines_.end()) {
     return found->second;
   }
@@ -521,9 +521,9 @@ std::shared_ptr<PipelineVK> PipelineVK::CreateOrGetVariantForSubpassCount(
       std::shared_ptr<PipelineVK>(PipelineVK::Create(desc_,                  //
                                                      device_holder_.lock(),  //
                                                      library_,               //
-                                                     subpass_index           //
+                                                     subpass_cursor          //
                                                      ));
-  subpass_pipelines_[subpass_index] = pipeline;
+  subpass_pipelines_[subpass_cursor] = pipeline;
   return pipeline;
 }
 

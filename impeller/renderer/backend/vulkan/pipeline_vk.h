@@ -26,12 +26,12 @@ class PipelineVK final
       const PipelineDescriptor& desc,
       const std::shared_ptr<DeviceHolder>& device_holder,
       std::weak_ptr<PipelineLibrary> weak_library,
-      SubpassIndexVK subpass_index);
+      SubpassCursorVK subpass_cursor);
 
   // |Pipeline|
   ~PipelineVK() override;
 
-  vk::Pipeline GetPipeline(SubpassIndexVK subpass_index) const;
+  vk::Pipeline GetPipeline(SubpassCursorVK subpass_cursor) const;
 
   const vk::PipelineLayout& GetPipelineLayout() const;
 
@@ -40,17 +40,17 @@ class PipelineVK final
  private:
   friend class PipelineLibraryVK;
 
-  using SubpassPipelines = std::unordered_map<SubpassIndexVK,
+  using SubpassPipelines = std::unordered_map<SubpassCursorVK,
                                               std::shared_ptr<PipelineVK>,
-                                              SubpassIndexVK::Hash,
-                                              SubpassIndexVK::Equal>;
+                                              SubpassCursorVK::Hash,
+                                              SubpassCursorVK::Equal>;
 
   std::weak_ptr<DeviceHolder> device_holder_;
   vk::UniquePipeline pipeline_;
   vk::UniqueRenderPass render_pass_;
   vk::UniquePipelineLayout layout_;
   vk::UniqueDescriptorSetLayout descriptor_set_layout_;
-  SubpassIndexVK subpass_index_;
+  SubpassCursorVK subpass_cursor_;
   mutable Mutex subpass_pipelines_mutex_;
   mutable SubpassPipelines subpass_pipelines_ IPLR_GUARDED_BY(
       subpass_pipelines_mutex_);
@@ -64,7 +64,7 @@ class PipelineVK final
              vk::UniqueRenderPass render_pass,
              vk::UniquePipelineLayout layout,
              vk::UniqueDescriptorSetLayout descriptor_set_layout,
-             SubpassIndexVK subpass_index);
+             SubpassCursorVK subpass_cursor);
 
   // |Pipeline|
   bool IsValid() const override;
@@ -73,8 +73,8 @@ class PipelineVK final
 
   PipelineVK& operator=(const PipelineVK&) = delete;
 
-  std::shared_ptr<PipelineVK> CreateOrGetVariantForSubpassCount(
-      SubpassIndexVK subpass_index) const;
+  std::shared_ptr<PipelineVK> CreateOrGetVariantForSubpass(
+      SubpassCursorVK subpass_cursor) const;
 };
 
 }  // namespace impeller

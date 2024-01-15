@@ -667,46 +667,46 @@ constexpr vk::ImageAspectFlags ToImageAspectFlags(PixelFormat format) {
   FML_UNREACHABLE();
 }
 
-struct SubpassIndexVK {
+struct SubpassCursorVK {
   size_t index = 0u;
   size_t count = 1u;
 
-  constexpr SubpassIndexVK() = default;
+  constexpr SubpassCursorVK() = default;
 
-  constexpr SubpassIndexVK(size_t p_index, size_t p_count)
+  constexpr SubpassCursorVK(size_t p_index, size_t p_count)
       : index(p_index), count(p_count) {}
 
   constexpr bool IsValid() const { return index < count; }
 
   constexpr bool IsFinalSubpass() const { return index == count - 1u; }
 
-  constexpr bool operator==(const SubpassIndexVK& o) const {
+  constexpr bool operator==(const SubpassCursorVK& o) const {
     return index == o.index && count == o.count;
   }
 
   struct Hash {
-    constexpr std::size_t operator()(const SubpassIndexVK& o) const {
+    constexpr std::size_t operator()(const SubpassCursorVK& o) const {
       return fml::HashCombine(o.index, o.count);
     }
   };
 
   struct Equal {
-    constexpr bool operator()(const SubpassIndexVK& lhs,
-                              const SubpassIndexVK& rhs) const {
+    constexpr bool operator()(const SubpassCursorVK& lhs,
+                              const SubpassCursorVK& rhs) const {
       return lhs.index == rhs.index && lhs.count == rhs.count;
     }
   };
 };
 
-static constexpr auto kLoneSubpassIndex = SubpassIndexVK{};
+static constexpr auto kLoneSupassCursor = SubpassCursorVK{};
 
 }  // namespace impeller
 
 namespace std {
 
 inline std::ostream& operator<<(std::ostream& out,
-                                const impeller::SubpassIndexVK& i) {
-  out << "{" << i.index << ", " << i.count << "}";
+                                const impeller::SubpassCursorVK& cursor) {
+  out << "{" << cursor.index << ", " << cursor.count << "}";
   return out;
 }
 

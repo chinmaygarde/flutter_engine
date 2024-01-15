@@ -190,7 +190,7 @@ PipelineFuture<PipelineDescriptor> PipelineLibraryVK::GetPipeline(
         descriptor,                                            //
         PipelineLibraryVK::Cast(*thiz).device_holder_.lock(),  //
         weak_this,                                             //
-        kLoneSubpassIndex                                      //
+        kLoneSupassCursor                                      //
         ));
   });
 

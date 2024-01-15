@@ -269,7 +269,7 @@ static bool EncodeCommand(const Context& context,
                           PassBindingsCache& command_buffer_cache,
                           const ISize& target_size,
                           const vk::DescriptorSet vk_desc_set,
-                          SubpassIndexVK subpass_index) {
+                          SubpassCursorVK subpass_cursor) {
 #ifdef IMPELLER_DEBUG
   fml::ScopedCleanupClosure pop_marker(
       [&encoder]() { encoder.PopDebugGroup(); });
@@ -293,7 +293,7 @@ static bool EncodeCommand(const Context& context,
 
   command_buffer_cache.BindPipeline(cmd_buffer,
                                     vk::PipelineBindPoint::eGraphics,
-                                    pipeline_vk.GetPipeline(subpass_index));
+                                    pipeline_vk.GetPipeline(subpass_cursor));
 
   // Set the viewport and scissors.
   SetViewportAndScissor(command, cmd_buffer, command_buffer_cache, target_size);
@@ -455,11 +455,11 @@ bool RenderPassVK::OnEncodeCommands(const Context& context) const {
 
   const auto& target_size = render_target_.GetRenderTargetSize();
 
-  SubpassIndexVK subpass_index;
-  subpass_index.count = CountSubpassesForCommandStream(commands_);
+  SubpassCursorVK subpass_cursor;
+  subpass_cursor.count = CountSubpassesForCommandStream(commands_);
 
   auto render_pass =
-      CreateVKRenderPass(vk_context, command_buffer, subpass_index.count);
+      CreateVKRenderPass(vk_context, command_buffer, subpass_cursor.count);
   if (!render_pass) {
     VALIDATION_LOG << "Could not create renderpass.";
     return false;
@@ -505,24 +505,24 @@ bool RenderPassVK::OnEncodeCommands(const Context& context) const {
     size_t command_index = 0u;
     for (const auto& command : commands_) {
       if (ShouldAdvanceSubpass(command, command_index)) {
-        subpass_index.index++;
+        subpass_cursor.index++;
         encoder->GetCommandBuffer().nextSubpass(vk::SubpassContents::eInline);
       }
-      FML_DCHECK(subpass_index.IsValid());
+      FML_DCHECK(subpass_cursor.IsValid());
       if (!EncodeCommand(context,                   //
                          command,                   //
                          *encoder,                  //
                          pass_bindings_cache_,      //
                          target_size,               //
                          desc_sets[command_index],  //
-                         subpass_index              //
+                         subpass_cursor             //
                          )) {
         return false;
       }
       command_index += 1;
     }
-    FML_DCHECK(subpass_index.IsValid());
-    FML_DCHECK(subpass_index.IsFinalSubpass());
+    FML_DCHECK(subpass_cursor.IsValid());
+    FML_DCHECK(subpass_cursor.IsFinalSubpass());
   }
 
   return true;
