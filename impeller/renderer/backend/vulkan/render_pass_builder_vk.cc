@@ -117,64 +117,26 @@ vk::UniqueRenderPass RenderPassBuilderVK::Build(
     attachments.push_back(depth_stencil_.value());
   }
 
-  std::vector<vk::SubpassDescription> subpasses;
-  subpasses.reserve(subpass_count_);
+  vk::SubpassDescription subpass0;
+  subpass0.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+  subpass0.setInputAttachments(color_refs);
+  subpass0.setColorAttachments(color_refs);
+  subpass0.setResolveAttachments(resolve_refs);
+  subpass0.setPDepthStencilAttachment(&depth_stencil_ref);
 
-  std::vector<vk::SubpassDependency> subpass_dependencies;
-  subpass_dependencies.reserve(subpass_count_);
-
-  for (size_t i = 0; i < subpass_count_; i++) {
-    // Setup the subpass.
-    {
-      vk::SubpassDescription subpass;
-      subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-      subpass.setInputAttachments(color_refs);
-      subpass.setColorAttachments(color_refs);
-      subpass.setResolveAttachments(resolve_refs);
-      subpass.setPDepthStencilAttachment(&depth_stencil_ref);
-      subpasses.emplace_back(std::move(subpass));
-    }
-
-    // Wire up the dependencies from the subpass before and after this subpass.
-    {
-      const bool is_first_subpass = i == 0u;
-      const bool is_last_subpass = i == subpass_count_ - 1u;
-      const bool is_sole_subpass = is_first_subpass && is_last_subpass;
-
-      if (is_sole_subpass) {
-        // Don't bother adding dependencies from the external passes if this is
-        // the only subpass. The defaults are fine.
-        break;
-      }
-
-      {
-        vk::SubpassDependency dep;
-
-        dep.srcSubpass = is_first_subpass ? VK_SUBPASS_EXTERNAL : i - 1;
-        dep.dstSubpass = i;
-
-        // All dependencies are framebuffer local.
-        dep.dependencyFlags = vk::DependencyFlagBits::eByRegion;
-
-        // All commands before this barrier must proceed till at least the
-        // color-attachment writes in the color-attachment output pipeline
-        // stage are executed. And, all commands after this barrier may
-        // continue till they encounter an input-attachment read in the
-        // fragment shader pipeline stage.
-        dep.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-        dep.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-        dep.dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
-        dep.dstAccessMask = vk::AccessFlagBits::eInputAttachmentRead;
-
-        subpass_dependencies.emplace_back(std::move(dep));
-      }
-    }
-  }
+  vk::SubpassDependency self_dep;
+  self_dep.srcSubpass = 0u;  // first subpass
+  self_dep.dstSubpass = 0u;  // to itself
+  self_dep.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+  self_dep.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+  self_dep.dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
+  self_dep.dstAccessMask = vk::AccessFlagBits::eInputAttachmentRead;
+  self_dep.dependencyFlags = vk::DependencyFlagBits::eByRegion;
 
   vk::RenderPassCreateInfo render_pass_desc;
   render_pass_desc.setAttachments(attachments);
-  render_pass_desc.setSubpasses(subpasses);
-  render_pass_desc.setDependencies(subpass_dependencies);
+  render_pass_desc.setSubpasses(subpass0);
+  render_pass_desc.setDependencies(self_dep);
 
   auto [result, pass] = device.createRenderPassUnique(render_pass_desc);
   if (result != vk::Result::eSuccess) {
@@ -182,11 +144,6 @@ vk::UniqueRenderPass RenderPassBuilderVK::Build(
     return {};
   }
   return std::move(pass);
-}
-
-RenderPassBuilderVK& RenderPassBuilderVK::SetSubpassCount(size_t subpasses) {
-  subpass_count_ = std::max<size_t>(1u, subpasses);
-  return *this;
 }
 
 }  // namespace impeller

@@ -127,8 +127,6 @@ static vk::UniqueRenderPass CreateCompatRenderPassForPipeline(
     size_t subpass_count) {
   RenderPassBuilderVK builder;
 
-  builder.SetSubpassCount(subpass_count);
-
   for (const auto& [bind_point, color] : desc.GetColorAttachmentDescriptors()) {
     builder.SetColorAttachment(bind_point,             //
                                color.format,           //

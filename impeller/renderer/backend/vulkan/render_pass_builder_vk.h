@@ -24,8 +24,6 @@ class RenderPassBuilderVK {
 
   RenderPassBuilderVK& operator=(const RenderPassBuilderVK&) = delete;
 
-  RenderPassBuilderVK& SetSubpassCount(size_t subpasses);
-
   RenderPassBuilderVK& SetColorAttachment(size_t index,
                                           PixelFormat format,
                                           SampleCount sample_count,
@@ -48,7 +46,6 @@ class RenderPassBuilderVK {
   std::map<size_t, vk::AttachmentDescription> colors_;
   std::map<size_t, vk::AttachmentDescription> resolves_;
   std::optional<vk::AttachmentDescription> depth_stencil_;
-  size_t subpass_count_ = 1u;
 };
 
 }  // namespace impeller

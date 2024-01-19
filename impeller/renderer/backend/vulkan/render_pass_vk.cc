@@ -47,8 +47,6 @@ SharedHandleVK<vk::RenderPass> RenderPassVK::CreateVKRenderPass(
 
   RenderPassBuilderVK builder;
 
-  builder.SetSubpassCount(subpass_count);
-
   for (const auto& [bind_point, color] : render_target_.GetColorAttachments()) {
     builder.SetColorAttachment(
         bind_point,                                          //
@@ -370,35 +368,6 @@ static bool EncodeCommand(const Context& context,
   return true;
 }
 
-static size_t CountSubpassesForCommandStream(
-    const std::vector<Command>& commands) {
-  if (commands.empty()) {
-    return 1u;
-  }
-  auto commands_with_input_attachments =
-      std::accumulate(commands.cbegin(), commands.cend(), 0u,
-                      [](size_t count, const auto& command) {
-                        return count + (command.pipeline->GetDescriptor()
-                                                .GetVertexDescriptor()
-                                                ->UsesInputAttacments()
-                                            ? 1u
-                                            : 0u);
-                      });
-  // If there are no commands with input attachments use, then we only need one
-  // lone subpass. This should be the most common case.
-  if (commands_with_input_attachments == 0) {
-    return 1u;
-  }
-  const bool first_command_uses_input_attachments =
-      commands.cbegin()
-          ->pipeline->GetDescriptor()
-          .GetVertexDescriptor()
-          ->UsesInputAttacments();
-  return first_command_uses_input_attachments
-             ? commands_with_input_attachments
-             : commands_with_input_attachments + 1u;
-}
-
 static bool ShouldAdvanceSubpass(const Command& command, size_t command_index) {
   const bool command_uses_input_attachments = command.pipeline->GetDescriptor()
                                                   .GetVertexDescriptor()
@@ -413,24 +382,6 @@ static bool ShouldAdvanceSubpass(const Command& command, size_t command_index) {
   }
 
   return true;
-}
-
-static void PreloadSubpassPipelineForCommandStream(
-    const std::vector<Command>& commands,
-    size_t subpass_count) {
-  if (subpass_count <= 1u) {
-    return;
-  }
-  size_t subpass_index = 0u;
-  for (size_t command_index = 0; command_index < commands.size();
-       command_index++) {
-    const auto& command = commands[command_index];
-    if (ShouldAdvanceSubpass(command, command_index)) {
-      subpass_index++;
-    }
-    PipelineVK::Cast(*command.pipeline)
-        .PreloadPipeline(SubpassCursorVK{subpass_index, subpass_count});
-  }
 }
 
 bool RenderPassVK::OnEncodeCommands(const Context& context) const {
@@ -475,9 +426,7 @@ bool RenderPassVK::OnEncodeCommands(const Context& context) const {
   const auto& target_size = render_target_.GetRenderTargetSize();
 
   SubpassCursorVK subpass_cursor;
-  subpass_cursor.count = CountSubpassesForCommandStream(commands_);
-
-  PreloadSubpassPipelineForCommandStream(commands_, subpass_cursor.count);
+  subpass_cursor.count = 1u;
 
   auto render_pass =
       CreateVKRenderPass(vk_context, command_buffer, subpass_cursor.count);
@@ -526,14 +475,32 @@ bool RenderPassVK::OnEncodeCommands(const Context& context) const {
     size_t command_index = 0u;
     for (const auto& command : commands_) {
       if (ShouldAdvanceSubpass(command, command_index)) {
-        subpass_cursor.index++;
-        encoder->GetCommandBuffer().nextSubpass(vk::SubpassContents::eInline);
+        vk::PipelineStageFlags src_stage =
+            vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        vk::PipelineStageFlags dst_stage =
+            vk::PipelineStageFlagBits::eFragmentShader;
+        vk::DependencyFlags dep_flags = vk::DependencyFlagBits::eByRegion;
+        std::array<vk::ImageMemoryBarrier, 1> barrier;
+        barrier[0].srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+        barrier[0].dstAccessMask = vk::AccessFlagBits::eInputAttachmentRead;
+        barrier[0].oldLayout = vk::ImageLayout::eGeneral;
+        barrier[0].newLayout = vk::ImageLayout::eGeneral;
+        barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier[0].image = TextureVK::Cast(*color_attachment0).GetImage();
+
+        vk::ImageSubresourceRange level0;
+        level0.aspectMask = vk::ImageAspectFlagBits::eColor;
+        level0.baseArrayLayer = 0u;
+        level0.baseMipLevel = 0u;
+        level0.layerCount = VK_REMAINING_ARRAY_LAYERS;
+        level0.levelCount = VK_REMAINING_MIP_LEVELS;
+        barrier[0].subresourceRange = level0;
+
+        encoder->GetCommandBuffer().pipelineBarrier(src_stage, dst_stage,
+                                                    dep_flags, {}, {}, barrier);
       }
       FML_DCHECK(subpass_cursor.IsValid());
-      FML_DCHECK(PipelineVK::Cast(*command.pipeline)
-                     .HasPreloadedPipeline(subpass_cursor))
-          << "Insufficient subpass pipeline preloading. Functionally correct "
-             "but misses using available concurrency.";
       if (!EncodeCommand(context,                   //
                          command,                   //
                          *encoder,                  //
