@@ -267,8 +267,7 @@ static bool EncodeCommand(const Context& context,
                           CommandEncoderVK& encoder,
                           PassBindingsCache& command_buffer_cache,
                           const ISize& target_size,
-                          const vk::DescriptorSet vk_desc_set,
-                          SubpassCursorVK subpass_cursor) {
+                          const vk::DescriptorSet vk_desc_set) {
 #ifdef IMPELLER_DEBUG
   fml::ScopedCleanupClosure pop_marker(
       [&encoder]() { encoder.PopDebugGroup(); });
@@ -290,9 +289,8 @@ static bool EncodeCommand(const Context& context,
       nullptr                            // offsets
   );
 
-  command_buffer_cache.BindPipeline(cmd_buffer,
-                                    vk::PipelineBindPoint::eGraphics,
-                                    pipeline_vk.GetPipeline(subpass_cursor));
+  command_buffer_cache.BindPipeline(
+      cmd_buffer, vk::PipelineBindPoint::eGraphics, pipeline_vk.GetPipeline());
 
   // Set the viewport and scissors.
   SetViewportAndScissor(command, cmd_buffer, command_buffer_cache, target_size);
@@ -368,7 +366,8 @@ static bool EncodeCommand(const Context& context,
   return true;
 }
 
-static bool ShouldAdvanceSubpass(const Command& command, size_t command_index) {
+static bool ShouldInsertInputAttachmentBarrier(const Command& command,
+                                               size_t command_index) {
   const bool command_uses_input_attachments = command.pipeline->GetDescriptor()
                                                   .GetVertexDescriptor()
                                                   ->UsesInputAttacments();
@@ -425,11 +424,7 @@ bool RenderPassVK::OnEncodeCommands(const Context& context) const {
 
   const auto& target_size = render_target_.GetRenderTargetSize();
 
-  SubpassCursorVK subpass_cursor;
-  subpass_cursor.count = 1u;
-
-  auto render_pass =
-      CreateVKRenderPass(vk_context, command_buffer, subpass_cursor.count);
+  auto render_pass = CreateVKRenderPass(vk_context, command_buffer, 1u);
   if (!render_pass) {
     VALIDATION_LOG << "Could not create renderpass.";
     return false;
@@ -474,7 +469,7 @@ bool RenderPassVK::OnEncodeCommands(const Context& context) const {
 
     size_t command_index = 0u;
     for (const auto& command : commands_) {
-      if (ShouldAdvanceSubpass(command, command_index)) {
+      if (ShouldInsertInputAttachmentBarrier(command, command_index)) {
         vk::PipelineStageFlags src_stage =
             vk::PipelineStageFlagBits::eColorAttachmentOutput;
         vk::PipelineStageFlags dst_stage =
@@ -500,21 +495,17 @@ bool RenderPassVK::OnEncodeCommands(const Context& context) const {
         encoder->GetCommandBuffer().pipelineBarrier(src_stage, dst_stage,
                                                     dep_flags, {}, {}, barrier);
       }
-      FML_DCHECK(subpass_cursor.IsValid());
-      if (!EncodeCommand(context,                   //
-                         command,                   //
-                         *encoder,                  //
-                         pass_bindings_cache_,      //
-                         target_size,               //
-                         desc_sets[command_index],  //
-                         subpass_cursor             //
+      if (!EncodeCommand(context,                  //
+                         command,                  //
+                         *encoder,                 //
+                         pass_bindings_cache_,     //
+                         target_size,              //
+                         desc_sets[command_index]  //
                          )) {
         return false;
       }
       command_index += 1;
     }
-    FML_DCHECK(subpass_cursor.IsValid());
-    FML_DCHECK(subpass_cursor.IsFinalSubpass());
   }
 
   return true;

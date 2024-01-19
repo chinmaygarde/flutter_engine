@@ -447,8 +447,7 @@ std::unique_ptr<PipelineVK> PipelineVK::Create(
       std::move(pipeline),               //
       std::move(render_pass),            //
       std::move(pipeline_layout.value),  //
-      std::move(descs_layout),           //
-      subpass_cursor                     //
+      std::move(descs_layout)            //
       ));
   if (!pipeline_vk->IsValid()) {
     VALIDATION_LOG << "Could not create a valid pipeline.";
@@ -463,15 +462,13 @@ PipelineVK::PipelineVK(std::weak_ptr<DeviceHolder> device_holder,
                        vk::UniquePipeline pipeline,
                        vk::UniqueRenderPass render_pass,
                        vk::UniquePipelineLayout layout,
-                       vk::UniqueDescriptorSetLayout descriptor_set_layout,
-                       SubpassCursorVK subpass_cursor)
+                       vk::UniqueDescriptorSetLayout descriptor_set_layout)
     : Pipeline(std::move(library), desc),
       device_holder_(std::move(device_holder)),
       pipeline_(std::move(pipeline)),
       render_pass_(std::move(render_pass)),
       layout_(std::move(layout)),
-      descriptor_set_layout_(std::move(descriptor_set_layout)),
-      subpass_cursor_(subpass_cursor) {
+      descriptor_set_layout_(std::move(descriptor_set_layout)) {
   is_valid_ = pipeline_ && render_pass_ && layout_ && descriptor_set_layout_;
 }
 
@@ -488,11 +485,8 @@ bool PipelineVK::IsValid() const {
   return is_valid_;
 }
 
-vk::Pipeline PipelineVK::GetPipeline(SubpassCursorVK cursor) const {
-  if (subpass_cursor_ == cursor) {
-    return *pipeline_;
-  }
-  return CreateOrGetVariantForSubpass(cursor).get()->GetPipeline(cursor);
+vk::Pipeline PipelineVK::GetPipeline() const {
+  return *pipeline_;
 }
 
 const vk::PipelineLayout& PipelineVK::GetPipelineLayout() const {
@@ -501,61 +495,6 @@ const vk::PipelineLayout& PipelineVK::GetPipelineLayout() const {
 
 const vk::DescriptorSetLayout& PipelineVK::GetDescriptorSetLayout() const {
   return *descriptor_set_layout_;
-}
-
-std::shared_future<std::shared_ptr<PipelineVK>>
-PipelineVK::CreateOrGetVariantForSubpass(SubpassCursorVK cursor) const {
-  Lock lock(subpass_pipelines_mutex_);
-  auto found = subpass_pipelines_.find(cursor);
-  if (found != subpass_pipelines_.end()) {
-    return found->second;
-  }
-  std::promise<std::shared_ptr<PipelineVK>> promise;
-  auto future =
-      std::shared_future<std::shared_ptr<PipelineVK>>{promise.get_future()};
-  subpass_pipelines_[cursor] = future;
-
-  auto task = [promise = std::move(promise),  //
-               desc = desc_,                  //
-               device = device_holder_,       //
-               library = library_,            //
-               cursor                         //
-  ]() mutable {
-    TRACE_EVENT0("impeller", "CreateSubpassPipelineVariantAsync");
-    auto pipeline = PipelineVK::Create(desc,           //
-                                       device.lock(),  //
-                                       library,        //
-                                       cursor          //
-    );
-    promise.set_value(std::shared_ptr<PipelineVK>{std::move(pipeline)});
-  };
-
-  auto library = library_.lock();
-  if (!library) {
-    promise.set_value(nullptr);
-    return future;
-  }
-
-  PipelineLibraryVK::Cast(*library).GetWorkerTaskRunner()->PostTask(
-      fml::MakeCopyable(std::move(task)));
-
-  return future;
-}
-
-void PipelineVK::PreloadPipeline(SubpassCursorVK cursor) const {
-  if (subpass_cursor_ == cursor) {
-    return;
-  }
-  // Create a future but don't await on it. The task has been enqueued.
-  CreateOrGetVariantForSubpass(cursor);
-}
-
-bool PipelineVK::HasPreloadedPipeline(SubpassCursorVK cursor) const {
-  if (subpass_cursor_ == cursor) {
-    return true;
-  }
-  Lock lock(subpass_pipelines_mutex_);
-  return subpass_pipelines_.find(cursor) != subpass_pipelines_.end();
 }
 
 }  // namespace impeller

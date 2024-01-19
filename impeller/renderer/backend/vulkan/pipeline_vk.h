@@ -31,11 +31,7 @@ class PipelineVK final
   // |Pipeline|
   ~PipelineVK() override;
 
-  void PreloadPipeline(SubpassCursorVK cursor) const;
-
-  bool HasPreloadedPipeline(SubpassCursorVK cursor) const;
-
-  vk::Pipeline GetPipeline(SubpassCursorVK cursor) const;
+  vk::Pipeline GetPipeline() const;
 
   const vk::PipelineLayout& GetPipelineLayout() const;
 
@@ -55,10 +51,6 @@ class PipelineVK final
   vk::UniqueRenderPass render_pass_;
   vk::UniquePipelineLayout layout_;
   vk::UniqueDescriptorSetLayout descriptor_set_layout_;
-  SubpassCursorVK subpass_cursor_;
-  mutable Mutex subpass_pipelines_mutex_;
-  mutable SubpassPipelines subpass_pipelines_ IPLR_GUARDED_BY(
-      subpass_pipelines_mutex_);
 
   bool is_valid_ = false;
 
@@ -68,8 +60,7 @@ class PipelineVK final
              vk::UniquePipeline pipeline,
              vk::UniqueRenderPass render_pass,
              vk::UniquePipelineLayout layout,
-             vk::UniqueDescriptorSetLayout descriptor_set_layout,
-             SubpassCursorVK subpass_cursor);
+             vk::UniqueDescriptorSetLayout descriptor_set_layout);
 
   // |Pipeline|
   bool IsValid() const override;
@@ -77,9 +68,6 @@ class PipelineVK final
   PipelineVK(const PipelineVK&) = delete;
 
   PipelineVK& operator=(const PipelineVK&) = delete;
-
-  std::shared_future<std::shared_ptr<PipelineVK>> CreateOrGetVariantForSubpass(
-      SubpassCursorVK cursor) const;
 };
 
 }  // namespace impeller
