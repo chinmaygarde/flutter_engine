@@ -366,8 +366,8 @@ static bool EncodeCommand(const Context& context,
   return true;
 }
 
-static bool ShouldInsertInputAttachmentBarrier(const Command& command,
-                                               size_t command_index) {
+static bool ShouldInsertBarrierForInputAttachmentRead(const Command& command,
+                                                      size_t command_index) {
   const bool command_uses_input_attachments = command.pipeline->GetDescriptor()
                                                   .GetVertexDescriptor()
                                                   ->UsesInputAttacments();
@@ -469,31 +469,10 @@ bool RenderPassVK::OnEncodeCommands(const Context& context) const {
 
     size_t command_index = 0u;
     for (const auto& command : commands_) {
-      if (ShouldInsertInputAttachmentBarrier(command, command_index)) {
-        vk::PipelineStageFlags src_stage =
-            vk::PipelineStageFlagBits::eColorAttachmentOutput;
-        vk::PipelineStageFlags dst_stage =
-            vk::PipelineStageFlagBits::eFragmentShader;
-        vk::DependencyFlags dep_flags = vk::DependencyFlagBits::eByRegion;
-        std::array<vk::ImageMemoryBarrier, 1> barrier;
-        barrier[0].srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-        barrier[0].dstAccessMask = vk::AccessFlagBits::eInputAttachmentRead;
-        barrier[0].oldLayout = vk::ImageLayout::eGeneral;
-        barrier[0].newLayout = vk::ImageLayout::eGeneral;
-        barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier[0].image = TextureVK::Cast(*color_attachment0).GetImage();
-
-        vk::ImageSubresourceRange level0;
-        level0.aspectMask = vk::ImageAspectFlagBits::eColor;
-        level0.baseArrayLayer = 0u;
-        level0.baseMipLevel = 0u;
-        level0.layerCount = VK_REMAINING_ARRAY_LAYERS;
-        level0.levelCount = VK_REMAINING_MIP_LEVELS;
-        barrier[0].subresourceRange = level0;
-
-        encoder->GetCommandBuffer().pipelineBarrier(src_stage, dst_stage,
-                                                    dep_flags, {}, {}, barrier);
+      if (ShouldInsertBarrierForInputAttachmentRead(command, command_index)) {
+        InsertBarrierForInputAttachmentRead(
+            encoder->GetCommandBuffer(),
+            TextureVK::Cast(*color_attachment0).GetImage());
       }
       if (!EncodeCommand(context,                  //
                          command,                  //

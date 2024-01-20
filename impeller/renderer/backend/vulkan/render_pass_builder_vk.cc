@@ -86,6 +86,8 @@ vk::UniqueRenderPass RenderPassBuilderVK::Build(
   // are not checking.
   const auto color_attachments_count = colors_.rbegin()->first + 1u;
 
+  FML_DCHECK(color_attachments_count != 0);
+
   std::vector<vk::AttachmentDescription> attachments;
 
   std::vector<vk::AttachmentReference> color_refs(color_attachments_count,
@@ -144,6 +146,33 @@ vk::UniqueRenderPass RenderPassBuilderVK::Build(
     return {};
   }
   return std::move(pass);
+}
+
+void InsertBarrierForInputAttachmentRead(const vk::CommandBuffer& buffer,
+                                         const vk::Image& image) {
+  vk::PipelineStageFlags src_stage =
+      vk::PipelineStageFlagBits::eColorAttachmentOutput;
+  vk::PipelineStageFlags dst_stage = vk::PipelineStageFlagBits::eFragmentShader;
+  vk::DependencyFlags dep_flags = vk::DependencyFlagBits::eByRegion;
+
+  vk::ImageMemoryBarrier barrier;
+  barrier.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+  barrier.dstAccessMask = vk::AccessFlagBits::eInputAttachmentRead;
+  barrier.oldLayout = vk::ImageLayout::eGeneral;
+  barrier.newLayout = vk::ImageLayout::eGeneral;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image = image;
+
+  vk::ImageSubresourceRange image_levels;
+  image_levels.aspectMask = vk::ImageAspectFlagBits::eColor;
+  image_levels.baseArrayLayer = 0u;
+  image_levels.baseMipLevel = 0u;
+  image_levels.layerCount = VK_REMAINING_ARRAY_LAYERS;
+  image_levels.levelCount = VK_REMAINING_MIP_LEVELS;
+  barrier.subresourceRange = image_levels;
+
+  buffer.pipelineBarrier(src_stage, dst_stage, dep_flags, {}, {}, barrier);
 }
 
 }  // namespace impeller

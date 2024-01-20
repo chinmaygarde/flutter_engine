@@ -48,6 +48,9 @@ class RenderPassBuilderVK {
   std::optional<vk::AttachmentDescription> depth_stencil_;
 };
 
+void InsertBarrierForInputAttachmentRead(const vk::CommandBuffer& buffer,
+                                         const vk::Image& image);
+
 }  // namespace impeller
 
 #endif  // FLUTTER_IMPELLER_RENDERER_BACKEND_VULKAN_RENDER_PASS_BUILDER_VK_H_
