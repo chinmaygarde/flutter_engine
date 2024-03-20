@@ -107,6 +107,8 @@ impeller_component("vulkan") {
     "swapchain/khr/khr_swapchain_impl_vk.h",
     "swapchain/khr/khr_swapchain_vk.cc",
     "swapchain/khr/khr_swapchain_vk.h",
+    "swapchain_vk.cc",
+    "swapchain_vk.h",
     "texture_source_vk.cc",
     "texture_source_vk.h",
     "texture_vk.cc",
@@ -128,6 +130,11 @@ impeller_component("vulkan") {
     sources += [
       "android/ahb_texture_source_vk.cc",
       "android/ahb_texture_source_vk.h",
+
+      # "swapchain/ahb/ahb_surface_vk.cc",
+      # "swapchain/ahb/ahb_surface_vk.h",
+      # "swapchain/ahb/ahb_swapchain_vk.cc",
+      # "swapchain/ahb/ahb_swapchain_vk.h",
     ]
   }
 
@@ -139,4 +146,8 @@ impeller_component("vulkan") {
     "//flutter/third_party/vulkan-deps/vulkan-headers/src:vulkan_headers",
     "//flutter/third_party/vulkan_memory_allocator",
   ]
+
+  if (is_android) {
+    public_deps += [ "//flutter/impeller/toolkit/android" ]
+  }
 }

@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "impeller/geometry/size.h"
+#include "impeller/renderer/backend/vulkan/swapchain_vk.h"
 #include "impeller/renderer/backend/vulkan/vk.h"
 #include "impeller/renderer/context.h"
 #include "impeller/renderer/surface.h"
@@ -22,7 +23,7 @@ class KHRSwapchainImplVK;
 ///             to an unrecoverable error and the swapchain must be recreated
 ///             with a new surface.
 ///
-class KHRSwapchainVK {
+class KHRSwapchainVK final : public SwapchainVK {
  public:
   static std::shared_ptr<KHRSwapchainVK> Create(
       const std::shared_ptr<Context>& context,
@@ -30,17 +31,19 @@ class KHRSwapchainVK {
       const ISize& size,
       bool enable_msaa = true);
 
+  // |SwapchainVK|
   ~KHRSwapchainVK();
 
   bool IsValid() const;
 
-  std::unique_ptr<Surface> AcquireNextDrawable();
+  // |SwapchainVK|
+  std::unique_ptr<Surface> AcquireNextDrawable() override;
 
-  vk::Format GetSurfaceFormat() const;
+  // |SwapchainVK|
+  vk::Format GetSurfaceFormat() const override;
 
-  /// @brief Mark the current swapchain configuration as dirty, forcing it to be
-  ///        recreated on the next frame.
-  void UpdateSurfaceSize(const ISize& size);
+  // |SwapchainVK|
+  void UpdateSurfaceSize(const ISize& size) override;
 
  private:
   std::shared_ptr<KHRSwapchainImplVK> impl_;
