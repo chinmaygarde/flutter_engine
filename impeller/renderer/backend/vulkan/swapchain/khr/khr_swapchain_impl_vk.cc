@@ -12,8 +12,8 @@
 #include "impeller/renderer/backend/vulkan/context_vk.h"
 #include "impeller/renderer/backend/vulkan/formats_vk.h"
 #include "impeller/renderer/backend/vulkan/gpu_tracer_vk.h"
-#include "impeller/renderer/backend/vulkan/swapchain/khr/khr_surface_vk.h"
-#include "impeller/renderer/backend/vulkan/swapchain/khr/khr_swapchain_image_vk.h"
+#include "impeller/renderer/backend/vulkan/swapchain/surface_vk.h"
+#include "impeller/renderer/backend/vulkan/swapchain/swapchain_image_vk.h"
 #include "impeller/renderer/context.h"
 #include "vulkan/vulkan_structs.hpp"
 
@@ -262,13 +262,13 @@ KHRSwapchainImplVK::KHRSwapchainImplVK(const std::shared_ptr<Context>& context,
   std::shared_ptr<Texture> depth_stencil_texture =
       context->GetResourceAllocator()->CreateTexture(depth_stencil_desc);
 
-  std::vector<std::shared_ptr<KHRSwapchainImageVK>> swapchain_images;
+  std::vector<std::shared_ptr<SwapchainImageVK>> swapchain_images;
   for (const auto& image : images) {
-    auto swapchain_image = std::make_shared<KHRSwapchainImageVK>(
-        texture_desc,            // texture descriptor
-        vk_context.GetDevice(),  // device
-        image                    // image
-    );
+    auto swapchain_image =
+        std::make_shared<SwapchainImageVK>(texture_desc,  // texture descriptor
+                                           vk_context.GetDevice(),  // device
+                                           image                    // image
+        );
     if (!swapchain_image->IsValid()) {
       VALIDATION_LOG << "Could not create swapchain image.";
       return;
@@ -403,7 +403,7 @@ KHRSwapchainImplVK::AcquireResult KHRSwapchainImplVK::AcquireNextDrawable() {
 
   auto image = images_[index % images_.size()];
   uint32_t image_index = index;
-  return AcquireResult{KHRSurfaceVK::WrapSwapchainImage(
+  return AcquireResult{SurfaceVK::WrapSwapchainImage(
       context_strong,  // context
       image,           // swapchain image
       [weak_swapchain = weak_from_this(), image, image_index]() -> bool {
@@ -417,9 +417,8 @@ KHRSwapchainImplVK::AcquireResult KHRSwapchainImplVK::AcquireNextDrawable() {
       )};
 }
 
-bool KHRSwapchainImplVK::Present(
-    const std::shared_ptr<KHRSwapchainImageVK>& image,
-    uint32_t index) {
+bool KHRSwapchainImplVK::Present(const std::shared_ptr<SwapchainImageVK>& image,
+                                 uint32_t index) {
   auto context_strong = context_.lock();
   if (!context_strong) {
     return false;

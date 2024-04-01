@@ -13,14 +13,16 @@
 
 namespace impeller {
 
-class KHRSwapchainImageVK final : public TextureSourceVK {
+class SwapchainImageBackingStoreVK;
+
+class SwapchainImageVK final : public TextureSourceVK {
  public:
-  KHRSwapchainImageVK(TextureDescriptor desc,
-                      const vk::Device& device,
-                      vk::Image image);
+  SwapchainImageVK(TextureDescriptor desc,
+                   const vk::Device& device,
+                   vk::Image image);
 
   // |TextureSourceVK|
-  ~KHRSwapchainImageVK() override;
+  ~SwapchainImageVK() override;
 
   bool IsValid() const;
 
@@ -55,9 +57,9 @@ class KHRSwapchainImageVK final : public TextureSourceVK {
   std::shared_ptr<Texture> depth_stencil_texture_;
   bool is_valid_ = false;
 
-  KHRSwapchainImageVK(const KHRSwapchainImageVK&) = delete;
+  SwapchainImageVK(const SwapchainImageVK&) = delete;
 
-  KHRSwapchainImageVK& operator=(const KHRSwapchainImageVK&) = delete;
+  SwapchainImageVK& operator=(const SwapchainImageVK&) = delete;
 };
 
 }  // namespace impeller

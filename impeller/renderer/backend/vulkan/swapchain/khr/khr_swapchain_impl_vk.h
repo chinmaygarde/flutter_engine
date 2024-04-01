@@ -16,7 +16,7 @@
 namespace impeller {
 
 class Context;
-class KHRSwapchainImageVK;
+class SwapchainImageVK;
 class Surface;
 struct KHRFrameSynchronizerVK;
 
@@ -68,7 +68,7 @@ class KHRSwapchainImplVK final
   vk::UniqueSurfaceKHR surface_;
   vk::Format surface_format_ = vk::Format::eUndefined;
   vk::UniqueSwapchainKHR swapchain_;
-  std::vector<std::shared_ptr<KHRSwapchainImageVK>> images_;
+  std::vector<std::shared_ptr<SwapchainImageVK>> images_;
   std::vector<std::unique_ptr<KHRFrameSynchronizerVK>> synchronizers_;
   size_t current_frame_ = 0u;
   ISize size_;
@@ -81,8 +81,7 @@ class KHRSwapchainImplVK final
                      bool enable_msaa,
                      vk::SwapchainKHR old_swapchain);
 
-  bool Present(const std::shared_ptr<KHRSwapchainImageVK>& image,
-               uint32_t index);
+  bool Present(const std::shared_ptr<SwapchainImageVK>& image, uint32_t index);
 
   void WaitIdle() const;
 
