@@ -7,13 +7,13 @@
 
 #include "impeller/geometry/size.h"
 #include "impeller/renderer/backend/vulkan/formats_vk.h"
+#include "impeller/renderer/backend/vulkan/swapchain/swapchain_image_vk.h"
 #include "impeller/renderer/backend/vulkan/texture_source_vk.h"
 #include "impeller/renderer/backend/vulkan/vk.h"
-#include "vulkan/vulkan_handles.hpp"
 
 namespace impeller {
 
-class KHRSwapchainImageVK final : public TextureSourceVK {
+class KHRSwapchainImageVK final : public SwapchainImageVK {
  public:
   KHRSwapchainImageVK(TextureDescriptor desc,
                       const vk::Device& device,
@@ -40,19 +40,9 @@ class KHRSwapchainImageVK final : public TextureSourceVK {
   // |TextureSourceVK|
   bool IsSwapchainImage() const override;
 
-  std::shared_ptr<Texture> GetMSAATexture() const;
-
-  std::shared_ptr<Texture> GetDepthStencilTexture() const;
-
-  void SetMSAATexture(std::shared_ptr<Texture> texture);
-
-  void SetDepthStencilTexture(std::shared_ptr<Texture> texture);
-
  private:
   vk::Image image_ = VK_NULL_HANDLE;
   vk::UniqueImageView image_view_ = {};
-  std::shared_ptr<Texture> msaa_texture_;
-  std::shared_ptr<Texture> depth_stencil_texture_;
   bool is_valid_ = false;
 
   KHRSwapchainImageVK(const KHRSwapchainImageVK&) = delete;

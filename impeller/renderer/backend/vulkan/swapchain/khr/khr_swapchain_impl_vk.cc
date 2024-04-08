@@ -15,7 +15,6 @@
 #include "impeller/renderer/backend/vulkan/swapchain/khr/khr_surface_vk.h"
 #include "impeller/renderer/backend/vulkan/swapchain/khr/khr_swapchain_image_vk.h"
 #include "impeller/renderer/context.h"
-#include "vulkan/vulkan_structs.hpp"
 
 namespace impeller {
 

@@ -9,7 +9,7 @@ namespace impeller {
 KHRSwapchainImageVK::KHRSwapchainImageVK(TextureDescriptor desc,
                                          const vk::Device& device,
                                          vk::Image image)
-    : TextureSourceVK(desc), image_(image) {
+    : SwapchainImageVK(desc), image_(image) {
   vk::ImageViewCreateInfo view_info;
   view_info.image = image_;
   view_info.viewType = vk::ImageViewType::e2D;
@@ -33,23 +33,6 @@ KHRSwapchainImageVK::~KHRSwapchainImageVK() = default;
 
 bool KHRSwapchainImageVK::IsValid() const {
   return is_valid_;
-}
-
-std::shared_ptr<Texture> KHRSwapchainImageVK::GetMSAATexture() const {
-  return msaa_texture_;
-}
-
-std::shared_ptr<Texture> KHRSwapchainImageVK::GetDepthStencilTexture() const {
-  return depth_stencil_texture_;
-}
-
-void KHRSwapchainImageVK::SetMSAATexture(std::shared_ptr<Texture> texture) {
-  msaa_texture_ = std::move(texture);
-}
-
-void KHRSwapchainImageVK::SetDepthStencilTexture(
-    std::shared_ptr<Texture> texture) {
-  depth_stencil_texture_ = std::move(texture);
 }
 
 PixelFormat KHRSwapchainImageVK::GetPixelFormat() const {
