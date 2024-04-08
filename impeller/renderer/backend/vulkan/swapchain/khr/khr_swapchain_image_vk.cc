@@ -75,4 +75,9 @@ vk::ImageView KHRSwapchainImageVK::GetRenderTargetView() const {
   return image_view_.get();
 }
 
+// |TextureSourceVK|
+bool KHRSwapchainImageVK::IsSwapchainImage() const {
+  return true;
+}
+
 }  // namespace impeller
