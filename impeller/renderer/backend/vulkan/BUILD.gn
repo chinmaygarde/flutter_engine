@@ -108,6 +108,8 @@ impeller_component("vulkan") {
     "swapchain/khr/khr_swapchain_impl_vk.h",
     "swapchain/khr/khr_swapchain_vk.cc",
     "swapchain/khr/khr_swapchain_vk.h",
+    "swapchain/swapchain_vk.cc",
+    "swapchain/swapchain_vk.h",
     "texture_source_vk.cc",
     "texture_source_vk.h",
     "texture_vk.cc",
