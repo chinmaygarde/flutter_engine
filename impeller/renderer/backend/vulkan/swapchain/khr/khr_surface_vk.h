@@ -8,8 +8,8 @@
 #include <memory>
 
 #include "impeller/renderer/backend/vulkan/context_vk.h"
-#include "impeller/renderer/backend/vulkan/swapchain/khr/khr_swapchain_image_vk.h"
 #include "impeller/renderer/backend/vulkan/swapchain/swapchain_transients_vk.h"
+#include "impeller/renderer/backend/vulkan/texture_source_vk.h"
 #include "impeller/renderer/surface.h"
 
 namespace impeller {
@@ -25,7 +25,7 @@ class KHRSurfaceVK final : public Surface {
   ///        This creates the associated MSAA and depth+stencil texture.
   static std::unique_ptr<KHRSurfaceVK> WrapSwapchainImage(
       const std::shared_ptr<SwapchainTransientsVK>& transients,
-      std::shared_ptr<KHRSwapchainImageVK>& swapchain_image,
+      const std::shared_ptr<TextureSourceVK>& swapchain_image,
       SwapCallback swap_callback);
 
   // |Surface|

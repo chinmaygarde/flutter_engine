@@ -7,13 +7,12 @@
 
 #include "impeller/geometry/size.h"
 #include "impeller/renderer/backend/vulkan/formats_vk.h"
-#include "impeller/renderer/backend/vulkan/swapchain/swapchain_image_vk.h"
 #include "impeller/renderer/backend/vulkan/texture_source_vk.h"
 #include "impeller/renderer/backend/vulkan/vk.h"
 
 namespace impeller {
 
-class KHRSwapchainImageVK final : public SwapchainImageVK {
+class KHRSwapchainImageVK final : public TextureSourceVK {
  public:
   KHRSwapchainImageVK(TextureDescriptor desc,
                       const vk::Device& device,
@@ -23,10 +22,6 @@ class KHRSwapchainImageVK final : public SwapchainImageVK {
   ~KHRSwapchainImageVK() override;
 
   bool IsValid() const;
-
-  PixelFormat GetPixelFormat() const;
-
-  ISize GetSize() const;
 
   // |TextureSourceVK|
   vk::Image GetImage() const override;

@@ -9,7 +9,7 @@ namespace impeller {
 KHRSwapchainImageVK::KHRSwapchainImageVK(TextureDescriptor desc,
                                          const vk::Device& device,
                                          vk::Image image)
-    : SwapchainImageVK(desc), image_(image) {
+    : TextureSourceVK(desc), image_(image) {
   vk::ImageViewCreateInfo view_info;
   view_info.image = image_;
   view_info.viewType = vk::ImageViewType::e2D;
@@ -33,14 +33,6 @@ KHRSwapchainImageVK::~KHRSwapchainImageVK() = default;
 
 bool KHRSwapchainImageVK::IsValid() const {
   return is_valid_;
-}
-
-PixelFormat KHRSwapchainImageVK::GetPixelFormat() const {
-  return desc_.format;
-}
-
-ISize KHRSwapchainImageVK::GetSize() const {
-  return desc_.size;
 }
 
 // |TextureSourceVK|

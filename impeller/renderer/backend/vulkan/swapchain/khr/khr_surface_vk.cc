@@ -13,7 +13,7 @@ namespace impeller {
 
 std::unique_ptr<KHRSurfaceVK> KHRSurfaceVK::WrapSwapchainImage(
     const std::shared_ptr<SwapchainTransientsVK>& transients,
-    std::shared_ptr<KHRSwapchainImageVK>& swapchain_image,
+    const std::shared_ptr<TextureSourceVK>& swapchain_image,
     SwapCallback swap_callback) {
   if (!transients || !swapchain_image || !swap_callback) {
     return nullptr;
@@ -26,10 +26,12 @@ std::unique_ptr<KHRSurfaceVK> KHRSurfaceVK::WrapSwapchainImage(
 
   const auto enable_msaa = transients->IsMSAAEnabled();
 
+  const auto swapchain_tex_desc = swapchain_image->GetTextureDescriptor();
+
   TextureDescriptor resolve_tex_desc;
   resolve_tex_desc.type = TextureType::kTexture2D;
-  resolve_tex_desc.format = swapchain_image->GetPixelFormat();
-  resolve_tex_desc.size = swapchain_image->GetSize();
+  resolve_tex_desc.format = swapchain_tex_desc.format;
+  resolve_tex_desc.size = swapchain_tex_desc.size;
   resolve_tex_desc.usage = TextureUsage::kRenderTarget;
   resolve_tex_desc.sample_count = SampleCount::kCount1;
   resolve_tex_desc.storage_mode = StorageMode::kDevicePrivate;
@@ -61,7 +63,7 @@ std::unique_ptr<KHRSurfaceVK> KHRSurfaceVK::WrapSwapchainImage(
   render_target_desc.SetupDepthStencilAttachments(
       /*context=*/*context,                            //
       /*allocator=*/*context->GetResourceAllocator(),  //
-      /*size=*/swapchain_image->GetSize(),             //
+      /*size=*/swapchain_tex_desc.size,                //
       /*msaa=*/enable_msaa,                            //
       /*label=*/"Onscreen",                            //
       /*stencil_attachment_config=*/
