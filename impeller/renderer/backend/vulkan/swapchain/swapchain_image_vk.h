@@ -17,18 +17,7 @@ class SwapchainImageVK : public TextureSourceVK {
 
   SwapchainImageVK& operator=(const SwapchainImageVK&) = delete;
 
-  std::shared_ptr<Texture> GetMSAATexture() const;
-
-  std::shared_ptr<Texture> GetDepthStencilTexture() const;
-
-  void SetMSAATexture(std::shared_ptr<Texture> texture);
-
-  void SetDepthStencilTexture(std::shared_ptr<Texture> texture);
-
  protected:
-  std::shared_ptr<Texture> msaa_texture_;
-  std::shared_ptr<Texture> depth_stencil_texture_;
-
   explicit SwapchainImageVK(TextureDescriptor desc);
 };
 

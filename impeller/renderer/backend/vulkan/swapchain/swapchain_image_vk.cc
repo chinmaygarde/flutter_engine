@@ -11,21 +11,4 @@ SwapchainImageVK::SwapchainImageVK(TextureDescriptor desc)
 
 SwapchainImageVK::~SwapchainImageVK() = default;
 
-std::shared_ptr<Texture> SwapchainImageVK::GetMSAATexture() const {
-  return msaa_texture_;
-}
-
-std::shared_ptr<Texture> SwapchainImageVK::GetDepthStencilTexture() const {
-  return depth_stencil_texture_;
-}
-
-void SwapchainImageVK::SetMSAATexture(std::shared_ptr<Texture> texture) {
-  msaa_texture_ = std::move(texture);
-}
-
-void SwapchainImageVK::SetDepthStencilTexture(
-    std::shared_ptr<Texture> texture) {
-  depth_stencil_texture_ = std::move(texture);
-}
-
 }  // namespace impeller

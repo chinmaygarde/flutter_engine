@@ -12,35 +12,19 @@
 namespace impeller {
 
 std::unique_ptr<KHRSurfaceVK> KHRSurfaceVK::WrapSwapchainImage(
-    const std::shared_ptr<Context>& context,
+    const std::shared_ptr<SwapchainTransientsVK>& transients,
     std::shared_ptr<KHRSwapchainImageVK>& swapchain_image,
-    SwapCallback swap_callback,
-    bool enable_msaa) {
-  if (!context || !swapchain_image || !swap_callback) {
+    SwapCallback swap_callback) {
+  if (!transients || !swapchain_image || !swap_callback) {
     return nullptr;
   }
 
-  std::shared_ptr<Texture> msaa_tex;
-  if (enable_msaa) {
-    TextureDescriptor msaa_tex_desc;
-    msaa_tex_desc.storage_mode = StorageMode::kDeviceTransient;
-    msaa_tex_desc.type = TextureType::kTexture2DMultisample;
-    msaa_tex_desc.sample_count = SampleCount::kCount4;
-    msaa_tex_desc.format = swapchain_image->GetPixelFormat();
-    msaa_tex_desc.size = swapchain_image->GetSize();
-    msaa_tex_desc.usage = TextureUsage::kRenderTarget;
-
-    if (!swapchain_image->GetMSAATexture()) {
-      msaa_tex = context->GetResourceAllocator()->CreateTexture(msaa_tex_desc);
-      msaa_tex->SetLabel("ImpellerOnscreenColorMSAA");
-      if (!msaa_tex) {
-        VALIDATION_LOG << "Could not allocate MSAA color texture.";
-        return nullptr;
-      }
-    } else {
-      msaa_tex = swapchain_image->GetMSAATexture();
-    }
+  auto context = transients->GetContext().lock();
+  if (!context) {
+    return nullptr;
   }
+
+  const auto enable_msaa = transients->IsMSAAEnabled();
 
   TextureDescriptor resolve_tex_desc;
   resolve_tex_desc.type = TextureType::kTexture2D;
@@ -56,7 +40,6 @@ std::unique_ptr<KHRSurfaceVK> KHRSurfaceVK::WrapSwapchainImage(
       );
 
   if (!resolve_tex) {
-    VALIDATION_LOG << "Could not wrap resolve texture.";
     return nullptr;
   }
   resolve_tex->SetLabel("ImpellerOnscreenResolve");
@@ -65,7 +48,7 @@ std::unique_ptr<KHRSurfaceVK> KHRSurfaceVK::WrapSwapchainImage(
   color0.clear_color = Color::DarkSlateGray();
   color0.load_action = LoadAction::kClear;
   if (enable_msaa) {
-    color0.texture = msaa_tex;
+    color0.texture = transients->GetMSAATexture();
     color0.store_action = StoreAction::kMultisampleResolve;
     color0.resolve_texture = resolve_tex;
   } else {
@@ -82,8 +65,8 @@ std::unique_ptr<KHRSurfaceVK> KHRSurfaceVK::WrapSwapchainImage(
       /*msaa=*/enable_msaa,                            //
       /*label=*/"Onscreen",                            //
       /*stencil_attachment_config=*/
-      RenderTarget::kDefaultStencilAttachmentConfig,                       //
-      /*depth_stencil_texture=*/swapchain_image->GetDepthStencilTexture()  //
+      RenderTarget::kDefaultStencilAttachmentConfig,                  //
+      /*depth_stencil_texture=*/transients->GetDepthStencilTexture()  //
   );
 
   // The constructor is private. So make_unique may not be used.
