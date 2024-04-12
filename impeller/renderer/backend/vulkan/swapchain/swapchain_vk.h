@@ -37,7 +37,6 @@ class SwapchainVK {
   static std::shared_ptr<SwapchainVK> Create(
       const std::shared_ptr<Context>& context,
       ANativeWindow* window,
-      const ISize& size,
       bool enable_msaa = true);
 #endif  // FML_OS_ANDROID
 

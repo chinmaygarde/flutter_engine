@@ -10,6 +10,11 @@
 
 namespace impeller {
 
+bool AHBSwapchainVK::IsAvailableOnPlatform() {
+  return android::SurfaceControl::IsAvailableOnPlatform() &&
+         android::HardwareBuffer::IsAvailableOnPlatform();
+}
+
 AHBSwapchainVK::AHBSwapchainVK(const std::shared_ptr<Context>& context,
                                ANativeWindow* window,
                                const ISize& size,

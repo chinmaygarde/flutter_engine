@@ -14,6 +14,8 @@ namespace impeller {
 
 class AHBSwapchainVK final : public SwapchainVK {
  public:
+  static bool IsAvailableOnPlatform();
+
   // |SwapchainVK|
   ~AHBSwapchainVK() override;
 
