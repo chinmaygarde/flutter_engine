@@ -42,8 +42,8 @@ AHBSwapchainImplVK::AHBSwapchainImplVK(
     bool enable_msaa)
     : surface_control_(std::move(surface_control)) {
   desc_ = android::HardwareBufferDescriptor::MakeForSwapchainImage(size);
-  if (!desc_.IsAllocatable()) {
-    VALIDATION_LOG << "Swapchain image is not allocatable.";
+  cache_ = std::make_shared<AHBTextureCacheVK>(context, desc_);
+  if (!cache_->IsValid()) {
     return;
   }
   transients_ = std::make_shared<SwapchainTransientsVK>(
@@ -71,26 +71,13 @@ std::unique_ptr<Surface> AHBSwapchainImplVK::AcquireNextDrawable() {
     return nullptr;
   }
 
-  auto context = transients_->GetContext().lock();
-  if (!context) {
+  auto ahb_texture_source = cache_->Pop();
+
+  if (!ahb_texture_source) {
+    VALIDATION_LOG << "Could not create AHB texture source.";
     return nullptr;
   }
 
-  auto ahb = std::make_unique<android::HardwareBuffer>(desc_);
-  if (!ahb->IsValid()) {
-    VALIDATION_LOG << "Could not create hardware buffer of size: "
-                   << desc_.size;
-    return nullptr;
-  }
-
-  auto ahb_texture_source =
-      std::make_shared<AHBTextureSourceVK>(context, std::move(ahb), true);
-  if (!ahb_texture_source->IsValid()) {
-    VALIDATION_LOG << "Could not create hardware buffer texture source for "
-                      "swapchain image of size: "
-                   << desc_.size;
-    return nullptr;
-  }
   return SurfaceVK::WrapSwapchainImage(
       transients_, ahb_texture_source,
       [weak = weak_from_this(), ahb_texture_source]() {
@@ -117,7 +104,13 @@ bool AHBSwapchainImplVK::Present(
                       "control.";
     return false;
   }
-  return transaction.Apply([texture]() {});
+  return transaction.Apply([texture, weak = weak_from_this()]() {
+    auto thiz = weak.lock();
+    if (!thiz) {
+      return;
+    }
+    thiz->cache_->Push(texture);
+  });
 }
 
 }  // namespace impeller

@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "impeller/renderer/backend/vulkan/android/ahb_texture_source_vk.h"
+#include "impeller/renderer/backend/vulkan/swapchain/ahb/ahb_texture_cache_vk.h"
 #include "impeller/renderer/backend/vulkan/swapchain/swapchain_transients_vk.h"
 #include "impeller/renderer/surface.h"
 #include "impeller/toolkit/android/hardware_buffer.h"
@@ -41,6 +42,7 @@ class AHBSwapchainImplVK final
  private:
   std::weak_ptr<android::SurfaceControl> surface_control_;
   android::HardwareBufferDescriptor desc_;
+  std::shared_ptr<AHBTextureCacheVK> cache_;
   std::shared_ptr<SwapchainTransientsVK> transients_;
   bool is_valid_ = false;
 
