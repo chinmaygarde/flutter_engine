@@ -42,7 +42,7 @@ AHBSwapchainImplVK::AHBSwapchainImplVK(
     bool enable_msaa)
     : surface_control_(std::move(surface_control)) {
   desc_ = android::HardwareBufferDescriptor::MakeForSwapchainImage(size);
-  cache_ = std::make_shared<AHBTextureCacheVK>(context, desc_);
+  cache_ = std::make_shared<AHBTexturePoolVK>(context, desc_);
   if (!cache_->IsValid()) {
     return;
   }

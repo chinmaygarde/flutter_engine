@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "impeller/renderer/backend/vulkan/swapchain/ahb/ahb_texture_cache_vk.h"
+#include "impeller/renderer/backend/vulkan/swapchain/ahb/ahb_texture_pool_vk.h"
 
 #include "flutter/fml/trace_event.h"
 
 namespace impeller {
 
-AHBTextureCacheVK::AHBTextureCacheVK(std::weak_ptr<Context> context,
-                                     android::HardwareBufferDescriptor desc,
-                                     size_t max_entries,
-                                     std::chrono::milliseconds max_extry_age)
+AHBTexturePoolVK::AHBTexturePoolVK(std::weak_ptr<Context> context,
+                                   android::HardwareBufferDescriptor desc,
+                                   size_t max_entries,
+                                   std::chrono::milliseconds max_extry_age)
     : context_(std::move(context)),
       desc_(desc),
       max_entries_(max_entries),
@@ -23,9 +23,9 @@ AHBTextureCacheVK::AHBTextureCacheVK(std::weak_ptr<Context> context,
   is_valid_ = true;
 }
 
-AHBTextureCacheVK::~AHBTextureCacheVK() = default;
+AHBTexturePoolVK::~AHBTexturePoolVK() = default;
 
-std::shared_ptr<AHBTextureSourceVK> AHBTextureCacheVK::Pop() {
+std::shared_ptr<AHBTextureSourceVK> AHBTexturePoolVK::Pop() {
   {
     Lock lock(cache_mutex_);
     if (!cache_.empty()) {
@@ -37,13 +37,13 @@ std::shared_ptr<AHBTextureSourceVK> AHBTextureCacheVK::Pop() {
   return CreateTexture();
 }
 
-void AHBTextureCacheVK::Push(std::shared_ptr<AHBTextureSourceVK> texture) {
+void AHBTexturePoolVK::Push(std::shared_ptr<AHBTextureSourceVK> texture) {
   Lock lock(cache_mutex_);
   cache_.push_back(CacheEntry{std::move(texture)});
   PerformGCLocked();
 }
 
-std::shared_ptr<AHBTextureSourceVK> AHBTextureCacheVK::CreateTexture() const {
+std::shared_ptr<AHBTextureSourceVK> AHBTexturePoolVK::CreateTexture() const {
   TRACE_EVENT0("impeller", "CreateSwapchainTexture");
   auto context = context_.lock();
   if (!context) {
@@ -70,12 +70,12 @@ std::shared_ptr<AHBTextureSourceVK> AHBTextureCacheVK::CreateTexture() const {
   return ahb_texture_source;
 }
 
-void AHBTextureCacheVK::PerformGC() {
+void AHBTexturePoolVK::PerformGC() {
   Lock lock(cache_mutex_);
   PerformGCLocked();
 }
 
-void AHBTextureCacheVK::PerformGCLocked() {
+void AHBTexturePoolVK::PerformGCLocked() {
   // Push-Pop operations happen at the back of the deque so the front ages as
   // much as possible. So that's where we collect entries.
   auto now = Clock::now();
@@ -86,7 +86,7 @@ void AHBTextureCacheVK::PerformGCLocked() {
   }
 }
 
-bool AHBTextureCacheVK::IsValid() const {
+bool AHBTexturePoolVK::IsValid() const {
   return is_valid_;
 }
 

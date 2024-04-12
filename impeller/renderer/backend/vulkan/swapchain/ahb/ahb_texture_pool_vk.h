@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FLUTTER_IMPELLER_RENDERER_BACKEND_VULKAN_SWAPCHAIN_AHB_AHB_TEXTURE_CACHE_VK_H_
-#define FLUTTER_IMPELLER_RENDERER_BACKEND_VULKAN_SWAPCHAIN_AHB_AHB_TEXTURE_CACHE_VK_H_
+#ifndef FLUTTER_IMPELLER_RENDERER_BACKEND_VULKAN_SWAPCHAIN_AHB_ahb_texture_pool_vk_H_
+#define FLUTTER_IMPELLER_RENDERER_BACKEND_VULKAN_SWAPCHAIN_AHB_ahb_texture_pool_vk_H_
 
 #include <deque>
 
@@ -13,19 +13,19 @@
 
 namespace impeller {
 
-class AHBTextureCacheVK {
+class AHBTexturePoolVK {
  public:
-  explicit AHBTextureCacheVK(
+  explicit AHBTexturePoolVK(
       std::weak_ptr<Context> context,
       android::HardwareBufferDescriptor desc,
       size_t max_entries = 2u,
       std::chrono::milliseconds max_extry_age = std::chrono::seconds{1});
 
-  ~AHBTextureCacheVK();
+  ~AHBTexturePoolVK();
 
-  AHBTextureCacheVK(const AHBTextureCacheVK&) = delete;
+  AHBTexturePoolVK(const AHBTexturePoolVK&) = delete;
 
-  AHBTextureCacheVK& operator=(const AHBTextureCacheVK&) = delete;
+  AHBTexturePoolVK& operator=(const AHBTexturePoolVK&) = delete;
 
   bool IsValid() const;
 
@@ -59,4 +59,4 @@ class AHBTextureCacheVK {
 
 }  // namespace impeller
 
-#endif  // FLUTTER_IMPELLER_RENDERER_BACKEND_VULKAN_SWAPCHAIN_AHB_AHB_TEXTURE_CACHE_VK_H_
+#endif  // FLUTTER_IMPELLER_RENDERER_BACKEND_VULKAN_SWAPCHAIN_AHB_ahb_texture_pool_vk_H_
