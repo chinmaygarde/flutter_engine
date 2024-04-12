@@ -55,6 +55,9 @@ std::shared_ptr<SwapchainVK> SwapchainVK::Create(
 
     if (ahb_swapchain->IsValid()) {
       return ahb_swapchain;
+    } else {
+      VALIDATION_LOG
+          << "Could not create AHB swapchain. Falling back to KHR variant.";
     }
   }
 
