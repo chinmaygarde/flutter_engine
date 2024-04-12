@@ -4,6 +4,8 @@
 
 #include "impeller/renderer/backend/vulkan/swapchain/ahb/ahb_texture_cache_vk.h"
 
+#include "flutter/fml/trace_event.h"
+
 namespace impeller {
 
 AHBTextureCacheVK::AHBTextureCacheVK(std::weak_ptr<Context> context,
@@ -32,7 +34,7 @@ std::shared_ptr<AHBTextureSourceVK> AHBTextureCacheVK::Pop() {
       return texture;
     }
   }
-  return Create();
+  return CreateTexture();
 }
 
 void AHBTextureCacheVK::Push(std::shared_ptr<AHBTextureSourceVK> texture) {
@@ -41,7 +43,8 @@ void AHBTextureCacheVK::Push(std::shared_ptr<AHBTextureSourceVK> texture) {
   PerformGCLocked();
 }
 
-std::shared_ptr<AHBTextureSourceVK> AHBTextureCacheVK::Create() const {
+std::shared_ptr<AHBTextureSourceVK> AHBTextureCacheVK::CreateTexture() const {
+  TRACE_EVENT0("impeller", "CreateSwapchainTexture");
   auto context = context_.lock();
   if (!context) {
     VALIDATION_LOG << "Context died before image could be created.";
@@ -78,7 +81,7 @@ void AHBTextureCacheVK::PerformGCLocked() {
   auto now = Clock::now();
   while (!cache_.empty() &&
          (cache_.size() > max_entries_ ||
-          now - cache_.front().last_access_time >= max_extry_age_)) {
+          now - cache_.front().last_access_time > max_extry_age_)) {
     cache_.pop_front();
   }
 }

@@ -19,7 +19,7 @@ class AHBTextureCacheVK {
       std::weak_ptr<Context> context,
       android::HardwareBufferDescriptor desc,
       size_t max_entries = 2u,
-      std::chrono::milliseconds max_extry_age = std::chrono::milliseconds{100});
+      std::chrono::milliseconds max_extry_age = std::chrono::seconds{1});
 
   ~AHBTextureCacheVK();
 
@@ -54,7 +54,7 @@ class AHBTextureCacheVK {
 
   void PerformGCLocked() IPLR_REQUIRES(cache_mutex_);
 
-  std::shared_ptr<AHBTextureSourceVK> Create() const;
+  std::shared_ptr<AHBTextureSourceVK> CreateTexture() const;
 };
 
 }  // namespace impeller
