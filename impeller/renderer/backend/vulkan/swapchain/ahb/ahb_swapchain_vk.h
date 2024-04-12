@@ -12,6 +12,17 @@
 
 namespace impeller {
 
+//------------------------------------------------------------------------------
+/// @brief      The implementation of a swapchain that uses hardware buffers
+///             presented to a given surface control on Android.
+///
+/// @warning    This swapchain implementation is not available on all Android
+///             versions supported by Flutter. Perform the
+///             `IsAvailableOnPlatform` check and fallback to KHR swapchains if
+///             this type of swapchain cannot be created. The available building
+///             blocks for these kinds of swapchains are only available on
+///             Android API levels >= 29.
+///
 class AHBSwapchainVK final : public SwapchainVK {
  public:
   static bool IsAvailableOnPlatform();

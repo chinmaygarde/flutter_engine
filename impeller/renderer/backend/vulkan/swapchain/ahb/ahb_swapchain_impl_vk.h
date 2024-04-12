@@ -16,9 +16,33 @@
 
 namespace impeller {
 
+//------------------------------------------------------------------------------
+/// @brief      The implementation of a swapchain at a specific size. Resizes to
+///             the surface will cause the instance of the swapchain impl at
+///             that size to be discarded along with all its caches and
+///             transients.
+///
 class AHBSwapchainImplVK final
     : public std::enable_shared_from_this<AHBSwapchainImplVK> {
  public:
+  //----------------------------------------------------------------------------
+  /// @brief      Create a swapchain of a specific size whose images will be
+  ///             presented to the provided surface control.
+  ///
+  /// @param[in]  context          The context whose allocators will be used to
+  ///                              create swapchain image resources.
+  /// @param[in]  surface_control  The surface control to which the swapchain
+  ///                              images will be presented.
+  /// @param[in]  size             The size of the swapchain images. This is
+  ///                              constant for the lifecycle of the swapchain
+  ///                              impl.
+  /// @param[in]  enable_msaa      If the swapchain images will be presented
+  ///                              using a render target that enables MSAA. This
+  ///                              allows for additional caching of transients.
+  ///
+  /// @return     A valid swapchain impl if one can be created. `nullptr`
+  ///             otherwise.
+  ///
   static std::shared_ptr<AHBSwapchainImplVK> Create(
       const std::weak_ptr<Context>& context,
       std::weak_ptr<android::SurfaceControl> surface_control,
@@ -31,18 +55,39 @@ class AHBSwapchainImplVK final
 
   AHBSwapchainImplVK& operator=(const AHBSwapchainImplVK&) = delete;
 
+  //----------------------------------------------------------------------------
+  /// @return     The size of the swapchain images that will be displayed on the
+  ///             surface control.
+  ///
   const ISize& GetSize() const;
 
+  //----------------------------------------------------------------------------
+  /// @return     If the swapchain impl is valid. If it is not, the instance
+  ///             must be discarded. There is no error recovery.
+  ///
   bool IsValid() const;
 
+  //----------------------------------------------------------------------------
+  /// @brief      Get the descriptor used to create the hardware buffers that
+  ///             will be displayed on the surface control.
+  ///
+  /// @return     The descriptor.
+  ///
   const android::HardwareBufferDescriptor& GetDescriptor() const;
 
+  //----------------------------------------------------------------------------
+  /// @brief      Acquire the next surface that can be used to present to the
+  ///             swapchain.
+  ///
+  /// @return     A surface if one can be created. If one cannot be created, it
+  ///             is likely due to resource exhaustion.
+  ///
   std::unique_ptr<Surface> AcquireNextDrawable();
 
  private:
   std::weak_ptr<android::SurfaceControl> surface_control_;
   android::HardwareBufferDescriptor desc_;
-  std::shared_ptr<AHBTexturePoolVK> cache_;
+  std::shared_ptr<AHBTexturePoolVK> pool_;
   std::shared_ptr<SwapchainTransientsVK> transients_;
   bool is_valid_ = false;
 

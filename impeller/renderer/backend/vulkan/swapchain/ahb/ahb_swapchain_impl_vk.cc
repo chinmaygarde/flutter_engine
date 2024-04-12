@@ -42,8 +42,8 @@ AHBSwapchainImplVK::AHBSwapchainImplVK(
     bool enable_msaa)
     : surface_control_(std::move(surface_control)) {
   desc_ = android::HardwareBufferDescriptor::MakeForSwapchainImage(size);
-  cache_ = std::make_shared<AHBTexturePoolVK>(context, desc_);
-  if (!cache_->IsValid()) {
+  pool_ = std::make_shared<AHBTexturePoolVK>(context, desc_);
+  if (!pool_->IsValid()) {
     return;
   }
   transients_ = std::make_shared<SwapchainTransientsVK>(
@@ -71,22 +71,21 @@ std::unique_ptr<Surface> AHBSwapchainImplVK::AcquireNextDrawable() {
     return nullptr;
   }
 
-  auto ahb_texture_source = cache_->Pop();
+  auto texture = pool_->Pop();
 
-  if (!ahb_texture_source) {
+  if (!texture) {
     VALIDATION_LOG << "Could not create AHB texture source.";
     return nullptr;
   }
 
   return SurfaceVK::WrapSwapchainImage(
-      transients_, ahb_texture_source,
-      [weak = weak_from_this(), ahb_texture_source]() {
+      transients_, texture, [weak = weak_from_this(), texture]() {
         auto thiz = weak.lock();
         if (!thiz) {
           VALIDATION_LOG << "Swapchain died before image could be presented.";
           return false;
         }
-        return thiz->Present(ahb_texture_source);
+        return thiz->Present(texture);
       });
 }
 
@@ -109,7 +108,7 @@ bool AHBSwapchainImplVK::Present(
     if (!thiz) {
       return;
     }
-    thiz->cache_->Push(texture);
+    thiz->pool_->Push(texture);
   });
 }
 
