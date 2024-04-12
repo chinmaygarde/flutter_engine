@@ -280,17 +280,18 @@ static TextureDescriptor ToTextureDescriptor(
 }
 
 AHBTextureSourceVK::AHBTextureSourceVK(
-    const std::shared_ptr<ContextVK>& context,
+    const std::shared_ptr<Context>& p_context,
     struct AHardwareBuffer* ahb,
     const AHardwareBuffer_Desc& ahb_desc)
     : TextureSourceVK(ToTextureDescriptor(ahb_desc)) {
-  if (!context) {
-    VALIDATION_LOG << "Invalid context.";
+  if (!p_context) {
     return;
   }
 
-  const auto& device = context->GetDevice();
-  const auto& physical_device = context->GetPhysicalDevice();
+  const auto& context = ContextVK::Cast(*p_context);
+
+  const auto& device = context.GetDevice();
+  const auto& physical_device = context.GetPhysicalDevice();
 
   AHBProperties ahb_props;
 
@@ -327,7 +328,7 @@ AHBTextureSourceVK::AHBTextureSourceVK(
   }
 
   // Figure out how to perform YUV conversions.
-  auto yuv_conversion = CreateYUVConversion(*context, ahb_props);
+  auto yuv_conversion = CreateYUVConversion(context, ahb_props);
   if (!yuv_conversion || !yuv_conversion->IsValid()) {
     return;
   }
@@ -350,13 +351,24 @@ AHBTextureSourceVK::AHBTextureSourceVK(
   image_view_ = std::move(image_view);
 
 #ifdef IMPELLER_DEBUG
-  context->SetDebugName(device_memory_.get(), "AHB Device Memory");
-  context->SetDebugName(image_.get(), "AHB Image");
-  context->SetDebugName(yuv_conversion_->GetConversion(), "AHB YUV Conversion");
-  context->SetDebugName(image_view_.get(), "AHB ImageView");
+  context.SetDebugName(device_memory_.get(), "AHB Device Memory");
+  context.SetDebugName(image_.get(), "AHB Image");
+  context.SetDebugName(yuv_conversion_->GetConversion(), "AHB YUV Conversion");
+  context.SetDebugName(image_view_.get(), "AHB ImageView");
 #endif  // IMPELLER_DEBUG
 
   is_valid_ = true;
+}
+
+AHBTextureSourceVK::AHBTextureSourceVK(
+    const std::shared_ptr<Context>& context,
+    std::unique_ptr<android::HardwareBuffer> backing_store,
+    bool is_swapchain_image)
+    : AHBTextureSourceVK(context,
+                         backing_store->GetHandle(),
+                         backing_store->GetAndroidDescriptor()) {
+  backing_store_ = std::move(backing_store);
+  is_swapchain_image_ = is_swapchain_image;
 }
 
 // |TextureSourceVK|
@@ -383,12 +395,16 @@ vk::ImageView AHBTextureSourceVK::GetRenderTargetView() const {
 
 // |TextureSourceVK|
 bool AHBTextureSourceVK::IsSwapchainImage() const {
-  return false;
+  return is_swapchain_image_;
 }
 
 // |TextureSourceVK|
 std::shared_ptr<YUVConversionVK> AHBTextureSourceVK::GetYUVConversion() const {
   return needs_yuv_conversion_ ? yuv_conversion_ : nullptr;
+}
+
+const android::HardwareBuffer* AHBTextureSourceVK::GetBackingStore() const {
+  return backing_store_.get();
 }
 
 }  // namespace impeller
