@@ -1,0 +1,47 @@
+# Copyright 2013 The Flutter Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("wasm") {
+  testonly = true
+  output_name = "wasm.html"
+  sources = [
+    "compressed_image.cc",
+    "compressed_image.h",
+    "fixtures_store.cc",
+    "fixtures_store.h",
+    "impeller_scene.cc",
+    "impeller_scene.h",
+    "reactor_worker.cc",
+    "reactor_worker.h",
+    "scene.cc",
+    "scene.h",
+    "stubs.cc",
+    "swapchain.cc",
+    "swapchain.h",
+    "wasm_main.cc",
+    "window.cc",
+    "window.h",
+  ]
+  deps = [
+    "//flutter/fml",
+    "//flutter/impeller/fixtures:file_fixtures",
+    "//flutter/impeller/fixtures:shader_fixtures",
+    "//flutter/impeller/renderer",
+    "//flutter/impeller/renderer/backend/gles",
+    "//flutter/impeller/toolkit/egl",
+  ]
+  libs = [
+    "EGL",
+    "GLESv2",
+  ]
+  ldflags = [
+    "-s",
+    "USE_WEBGL2=1",
+    "-s",
+    "FETCH",
+    "--shell-file",
+    rebase_path("shell_minimal.html"),
+  ]
+  include_dirs = [ "//flutter/third_party/stb" ]
+}
