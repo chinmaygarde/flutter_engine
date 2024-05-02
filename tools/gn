@@ -437,6 +437,12 @@ def to_gn_args(args):
   gn_args['skia_use_icu'] = True
   gn_args['is_official_build'] = True  # Disable Skia test utilities.
   gn_args['android_full_debug'] = args.target_os == 'android' and args.unoptimized
+
+  if args.slimpeller:
+    gn_args['slimpeller'] = True
+    gn_args['skia_enable_ganesh'] = False
+    gn_args['skia_enable_graphite'] = False
+
   if args.clang is None:
     gn_args['is_clang'] = True
   else:

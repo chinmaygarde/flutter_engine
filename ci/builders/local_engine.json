@@ -514,6 +514,39 @@
     {
       "cas_archive": false,
       "drone_dimensions": [
+        "os=Mac-13",
+        "device_type=none"
+      ],
+      "gclient_variables": {
+        "download_android_deps": false,
+        "use_rbe": true
+      },
+      "gn": [
+        "--runtime-mode",
+        "debug",
+        "--unopt",
+        "--mac-cpu",
+        "arm64",
+        "--xcode-symlinks",
+        "--rbe",
+        "--no-goma",
+        "--slimpeller"
+      ],
+      "name": "macos/host_debug_unopt_arm64_slimpeller",
+      "description": "Builds a slimpeller debug mode engine for a macOS host on arm64.",
+      "ninja": {
+        "config": "host_debug_unopt_arm64_slimpeller",
+        "targets": []
+      },
+      "properties": {
+        "$flutter/osx_sdk": {
+          "sdk_version": "15a240d"
+        }
+      }
+    },
+    {
+      "cas_archive": false,
+      "drone_dimensions": [
         "os=Linux",
         "device_type=none"
       ],
