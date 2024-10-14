@@ -2,17 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cmath>
+
 #include "display_list/display_list.h"
 #include "display_list/dl_blend_mode.h"
 #include "display_list/dl_tile_mode.h"
 #include "display_list/effects/dl_color_source.h"
 #include "display_list/effects/dl_mask_filter.h"
-#include "flutter/impeller/display_list/aiks_unittests.h"
-
 #include "flutter/display_list/dl_builder.h"
 #include "flutter/display_list/dl_color.h"
 #include "flutter/display_list/dl_paint.h"
+#include "flutter/impeller/display_list/aiks_unittests.h"
 #include "flutter/testing/testing.h"
+#include "impeller/base/timing.h"
+#include "impeller/display_list/timing_curve.h"
 #include "impeller/geometry/matrix.h"
 #include "impeller/typographer/backends/skia/text_frame_skia.h"
 #include "impeller/typographer/backends/stb/text_frame_stb.h"
@@ -20,7 +23,6 @@
 #include "impeller/typographer/backends/stb/typographer_context_stb.h"
 #include "include/core/SkMatrix.h"
 #include "include/core/SkRect.h"
-
 #include "txt/platform.h"
 
 using namespace flutter;
@@ -217,6 +219,55 @@ TEST_P(AiksTest, CanRenderTextFrameSTB) {
 
   SetTypographerContext(TypographerContextSTB::Make());
   ASSERT_TRUE(OpenPlaygroundHere(builder.Build()));
+}
+
+TEST_P(AiksTest, TextFrameScalingJitter) {
+  const auto curve =
+      TimingCurve::SystemTimingCurve(TimingCurve::Type::kEaseInEaseOut);
+  auto start = Clock::now();
+  bool flip = false;
+  auto callback = [&]() -> sk_sp<DisplayList> {
+    static float font_size = 20;
+    static float interval = 8.0;
+    static float zoom = 5.0;
+
+    if (AiksTest::ImGuiBegin("Controls", nullptr,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+      ImGui::SliderFloat("Interval", &interval, 1.0, 20.0);
+      ImGui::SliderFloat("Zoom", &zoom, 1.0, 10.0);
+      ImGui::End();
+    }
+
+    const auto now = Clock::now();
+    const auto duration = now - start;
+    auto duration_seconds =
+        std::chrono::duration_cast<SecondsF>(duration).count();
+
+    auto unit_interval = duration_seconds / interval;
+    if (flip) {
+      unit_interval = 1.0 - unit_interval;
+    }
+    const auto scale = curve.x(unit_interval) * zoom;
+
+    if (duration_seconds > interval) {
+      start = now;
+      flip = !flip;
+    }
+
+    SkPoint position = SkPoint::Make(10, 100);
+    DisplayListBuilder builder;
+    builder.Scale(GetContentScale().x + scale, GetContentScale().y + scale);
+    if (!RenderTextInCanvasSkia(
+            GetContext(), builder,
+            "the quick brown fox jumped over "
+            "the lazy dog!.?",
+            "Roboto-Regular.ttf",
+            {.font_size = font_size, .position = position})) {
+      return nullptr;
+    }
+    return builder.Build();
+  };
+  ASSERT_TRUE(OpenPlaygroundHere(callback));
 }
 
 TEST_P(AiksTest, TextFrameSubpixelAlignment) {
