@@ -265,6 +265,7 @@ TEST_P(AiksTest, TextFrameScalingJitter) {
             {.font_size = font_size, .position = position})) {
       return nullptr;
     }
+    // std::this_thread::sleep_for(std::chrono::milliseconds{500});
     return builder.Build();
   };
   ASSERT_TRUE(OpenPlaygroundHere(callback));

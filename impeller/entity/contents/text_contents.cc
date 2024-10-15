@@ -73,6 +73,19 @@ void TextContents::SetTextProperties(Color color,
   }
 }
 
+static Point VertexPositionForGlyph(const Matrix& entity_transform,
+                                    const Point& glyph_position,
+                                    const Point& unit_glyph_offset,
+                                    const Rect& glyph_bounds,
+                                    const Point& subpixel_adjustment) {
+  const Point screen_offset =
+      (entity_transform * Point::MakeXY(0, 0)) + subpixel_adjustment;
+  const Point glyph_offset =
+      entity_transform.Basis() * ((glyph_position + glyph_bounds.GetLeftTop()) +
+                                  (unit_glyph_offset * glyph_bounds.GetSize()));
+  return (screen_offset + glyph_offset).Floor();
+}
+
 bool TextContents::Render(const ContentContext& renderer,
                           const Entity& entity,
                           RenderPass& pass) const {
@@ -107,7 +120,6 @@ bool TextContents::Render(const ContentContext& renderer,
   ISize atlas_size = atlas->GetTexture()->GetSize();
   bool is_translation_scale = entity.GetTransform().IsTranslationScaleOnly();
   Matrix entity_transform = entity.GetTransform();
-  Matrix basis_transform = entity_transform.Basis();
 
   VS::BindFrameInfo(pass,
                     renderer.GetTransientsBuffer().EmplaceUniform(frame_info));
@@ -198,7 +210,6 @@ bool TextContents::Render(const ContentContext& renderer,
               break;
           }
 
-          Point screen_offset = (entity_transform * Point(0, 0));
           for (const TextRun::GlyphPosition& glyph_position :
                run.GetGlyphPositions()) {
             // Note: uses unrounded scale for more accurate subpixel position.
@@ -223,26 +234,21 @@ bool TextContents::Render(const ContentContext& renderer,
             // glyph bounds are used to compute UVs in cases where the
             // destination and source sizes may differ due to clamping the sizes
             // of large glyphs.
-            Point uv_origin =
+            const Point uv_origin =
                 (atlas_glyph_bounds.GetLeftTop() - Point(0.5, 0.5)) /
                 atlas_size;
-            Point uv_size =
+            const Point uv_size =
                 (atlas_glyph_bounds.GetSize() + Point(1, 1)) / atlas_size;
-
-            Point unrounded_glyph_position =
-                basis_transform *
-                (glyph_position.position + scaled_bounds.GetLeftTop());
-
-            Point screen_glyph_position =
-                (screen_offset + unrounded_glyph_position + subpixel_adjustment)
-                    .Floor();
 
             for (const Point& point : unit_points) {
               Point position;
               if (is_translation_scale) {
-                position = (screen_glyph_position +
-                            (basis_transform * point * scaled_bounds.GetSize()))
-                               .Round();
+                position = VertexPositionForGlyph(entity_transform,         //
+                                                  glyph_position.position,  //
+                                                  point,                    //
+                                                  scaled_bounds,            //
+                                                  subpixel_adjustment       //
+                );
               } else {
                 position = entity_transform * (glyph_position.position +
                                                scaled_bounds.GetLeftTop() +
@@ -250,6 +256,7 @@ bool TextContents::Render(const ContentContext& renderer,
               }
               vtx.uv = uv_origin + (uv_size * point);
               vtx.position = position;
+              vtx.debug_color = Color::Green();
               vtx_contents[i++] = vtx;
             }
           }

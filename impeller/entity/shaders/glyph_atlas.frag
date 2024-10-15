@@ -18,6 +18,7 @@ uniform FragInfo {
 frag_info;
 
 in highp vec2 v_uv;
+flat in highp vec4 v_debug_color;
 
 out f16vec4 frag_color;
 
@@ -26,15 +27,15 @@ void main() {
 
   if (frag_info.is_color_glyph == 1.0) {
     if (frag_info.use_text_color == 1.0) {
-      frag_color = value.aaaa * frag_info.text_color;
+      frag_color = value.aaaa * v_debug_color;
     } else {
-      frag_color = value * frag_info.text_color.aaaa;
+      frag_color = value * v_debug_color.aaaa;
     }
   } else {
     if (use_alpha_color_channel == 1.0) {
-      frag_color = value.aaaa * frag_info.text_color;
+      frag_color = value.aaaa * v_debug_color;
     } else {
-      frag_color = value.rrrr * frag_info.text_color;
+      frag_color = value.rrrr * v_debug_color;
     }
   }
 }

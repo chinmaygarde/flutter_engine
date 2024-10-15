@@ -11,10 +11,13 @@ frame_info;
 
 in vec2 uv;
 in vec2 position;
+in vec4 debug_color;
 
 out vec2 v_uv;
+flat out vec4 v_debug_color;
 
 void main() {
   gl_Position = frame_info.mvp * vec4(position, 0, 1);
   v_uv = uv;
+  v_debug_color = debug_color;
 }
