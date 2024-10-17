@@ -24,7 +24,8 @@ The core rendering engine is less than 200 KB compressed.
 
 The text layout and shaping engine along with the bundled ICU data tables brings the size up to ~2.5 MB. If the application does not need text layout and shaping, or can interface with an existing library on the target platform, it is recommended to generate the SDK without built-in support for typography. Impeller is a rendering engine but typography is really hard to get right and needed by most users of a rendering engine. That is why one is included by default. But it is optional.
 
-Users of the prebuilt artifacts should strip the binaries before deployment as these contain debug symbols.
+> [!CAUTION]
+> Users of the prebuilt artifacts should strip the binaries before deployment as these contain debug symbols.
 
 ## Performant
 
@@ -61,3 +62,33 @@ The `$PLATFORM_ARCH` can be determined from the table below.
 
 For example, the SDK for `Linux x64` at engine SHA `31aaaaad868743b38ac3b7165f0d58eca94e521b` would be https://storage.googleapis.com/flutter_infra_release/flutter/31aaaaad868743b38ac3b7165f0d58eca94e521b/linux-x64/impeller_sdk.zip
 
+# API Fundamentals
+
+## Versioning
+
+The current version of the API is denoted by the `IMPELLER_VERSION` macro. This version must be passed to APIs that create top-level objects like graphics contexts. Construction of the context may fail if the API expected by the caller is not supported by the library.
+
+The version currently supported by the library is returned by a call to `ImpellerGetVersion()`
+
+Since there are no API stability guarantees today, passing a version that is different to the one returned by `ImpellerGetVersion` will always fail.
+
+## Object Model
+
+Users interact with Impeller objects using opaque handles. Impeller objects can be identified by their definition using `IMPELLER_DEFINE_HANDLE` in the SDK.
+
+All Impeller objects are thread-safe reference-counted.
+
+### Reference Management
+
+Methods in the Impeller API follow a very strict convention. This makes it easy to write automated bindings generators that handle object lifecycles to various degrees:
+
+* Methods that end with `Retain` increment the reference count of the object by 1.
+* Methods that end with `Release` decrement the reference count of the object by 1. When the reference count of the object reaches 0, the object is collected.
+* Methods that end with `New` create a new object with a reference count of 1.
+  * This reference must be relinquished by the appropriate call to `Release`.
+* The framework may hold strong references to objects internally. When the user releases their last reference, it is not guaranteed that the object will be immediately destructed.
+* Reference counts can be incremented and decremented in a thread-safe manner. But, not all objects can be used safely from multiple thread concurrently. The thread safety attributes of the object should be documented in the header.
+
+### Null Safety
+
+The Impeller API passes [nullability completeness](https://clang.llvm.org/docs/DiagnosticsReference.html#wnullability-completeness) checks. All pointer arguments and return values are decorated with `IMPELLER_NULLABLE` and `IMPELLER_NONNULL`. Passing a null pointer to an argument decorated with `IMPELLER_NONNULL` will very likely result in a null pointer dereference. When generating automated bindings to other languages, it is recommended that these decorations be used to inform the API and perform additional checks.
