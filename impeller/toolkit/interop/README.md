@@ -47,10 +47,9 @@ Users may plug in any toolchain into the Flutter Engine build system to build th
 https://storage.googleapis.com/flutter_infra_release/flutter/$FLUTTER_ENGINE_SHA/$PLATFORM_ARCH/impeller_sdk.zip
 ```
 
-The `$FLUTTER_ENGINE_SHA` is the Git hash in the Flutter Engine repository. To make sure all artifacts for a specific hash have been successfully generated, look up the Flutter Engine SHA currently used by the Flutter Framework in the [engine.version](https://github.com/flutter/flutter/blob/4ed8136610731e754f5f8c27878c6d1adf4d63f5/bin/internal/engine.version) file.
+The `$FLUTTER_ENGINE_SHA` is the Git hash in the Flutter Engine repository. To make sure all artifacts for a specific hash have been successfully generated, look up the Flutter Engine SHA currently used by the Flutter Framework in the [engine.version](https://github.com/flutter/flutter/blob/master/bin/internal/engine.version) file.
 
 The `$PLATFORM_ARCH` can be determined from the table below.
-
 
 |       | macOS        | Linux       | Android        | Windows       |
 |:-----:|:------------:|:-----------:|:--------------:|:-------------:|
@@ -60,5 +59,5 @@ The `$PLATFORM_ARCH` can be determined from the table below.
 | x64   | darwin-x64   | linux-x64   | android-x64    | windows-x64   |
 
 
-
 For example, the SDK for `Linux x64` at engine SHA `31aaaaad868743b38ac3b7165f0d58eca94e521b` would be https://storage.googleapis.com/flutter_infra_release/flutter/31aaaaad868743b38ac3b7165f0d58eca94e521b/linux-x64/impeller_sdk.zip
+
