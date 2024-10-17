@@ -52,7 +52,7 @@ The `$FLUTTER_ENGINE_SHA` is the Git hash in the Flutter Engine repository. To m
 The `$PLATFORM_ARCH` can be determined from the table below.
 
 
-| Arch  | macOS        | Linux       | Android        | Windows       |
+|       | macOS        | Linux       | Android        | Windows       |
 |:-----:|:------------:|:-----------:|:--------------:|:-------------:|
 | armv7 |              |             | android-arm    |               |
 | arm64 | darwin-arm64 | linux-arm64 | android-arm64  | windows-arm64 |
