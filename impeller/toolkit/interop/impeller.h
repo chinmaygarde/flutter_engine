@@ -79,13 +79,38 @@ IMPELLER_EXTERN_C_BEGIN
 #define IMPELLER_DEFINE_HANDLE(handle) \
   typedef struct IMPELLER_INTERNAL_HANDLE_NAME(handle) * handle;
 
+//------------------------------------------------------------------------------
+/// Color filters are functions that take two colors and mix them to produce a
+/// single color. This color is then merged with the destination during
+/// blending.
+///
 IMPELLER_DEFINE_HANDLE(ImpellerColorFilter);
+
+//------------------------------------------------------------------------------
+/// Color sources are functions that generate colors for each texture element
+/// covered by a draw call. The colors for each element can be generated using a
+/// mathematical function (to produce gradients for example) or sampled from a
+/// texture.
+///
 IMPELLER_DEFINE_HANDLE(ImpellerColorSource);
+
+//------------------------------------------------------------------------------
+/// Image filters are functions that are applied regions of a texture to produce
+/// a single color. Contrast this with color filters that operate on a per-pixel
+/// basis. The generated color is then merged with the destination during
+/// blending.
+///
+IMPELLER_DEFINE_HANDLE(ImpellerImageFilter);
+
+//------------------------------------------------------------------------------
+/// Mask filters are functions that are applied over a shape after it has been
+/// drawn but before it has been blended into the final image.
+///
+IMPELLER_DEFINE_HANDLE(ImpellerMaskFilter);
+
 IMPELLER_DEFINE_HANDLE(ImpellerContext);
 IMPELLER_DEFINE_HANDLE(ImpellerDisplayList);
 IMPELLER_DEFINE_HANDLE(ImpellerDisplayListBuilder);
-IMPELLER_DEFINE_HANDLE(ImpellerImageFilter);
-IMPELLER_DEFINE_HANDLE(ImpellerMaskFilter);
 IMPELLER_DEFINE_HANDLE(ImpellerPaint);
 IMPELLER_DEFINE_HANDLE(ImpellerParagraph);
 IMPELLER_DEFINE_HANDLE(ImpellerParagraphBuilder);
@@ -253,6 +278,9 @@ typedef struct ImpellerISize {
   int64_t height;
 } ImpellerISize;
 
+//------------------------------------------------------------------------------
+/// A 4x4 transformation matrix using column-major storage.
+///
 typedef struct ImpellerMatrix {
   float m[16];
 } ImpellerMatrix;
@@ -292,6 +320,15 @@ typedef struct ImpellerMapping {
 // Version
 //------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+/// @brief      Get the version of Impeller standalone API. This is the API that
+///             will be accepted for validity checks when provided to the
+///             context creation methods.
+///
+/// @see        `ImpellerContextCreateOpenGLESNew`
+///
+/// @return     The version of the standalone API.
+///
 IMPELLER_EXPORT
 uint32_t ImpellerGetVersion();
 
@@ -299,15 +336,55 @@ uint32_t ImpellerGetVersion();
 // Context
 //------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+/// @brief      Create an OpenGL(ES) Impeller context.
+///
+/// @warning    Unlike other context types, the OpenGL ES context can only be
+///             created, used, and collected on the calling thread. This
+///             restriction may be lifted in the future once reactor workers are
+///             exposed in the API. No other context types have threading
+///             restrictions. Till reactor workers can be used, using the
+///             context on a background thread will cause a stall of OpenGL
+///             operations.
+///
+/// @param[in]  version      The version of the Impeller
+///                          standalone API. See `ImpellerGetVersion`. If the
+///                          specified here is not compatible with the version
+///                          of the library, context creation will fail and NULL
+///                          context returned from this call.
+/// @param[in]  gl_proc_address_callback
+///                          The gl proc address callback. For instance,
+///                          `eglGetProcAddress`.
+///
+/// @param      gl_proc_address_callback_user_data
+///                          The gl proc address callback user data baton. This
+///                          pointer is not interpreted by Impeller and will be
+///                          returned as user data in the proc address callback.
+///                          user data.
+///
+/// @return     The context or NULL if one cannot be created.
+///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerContext IMPELLER_NULLABLE
 ImpellerContextCreateOpenGLESNew(
     uint32_t version,
     ImpellerProcAddressCallback IMPELLER_NONNULL gl_proc_address_callback,
     void* IMPELLER_NULLABLE gl_proc_address_callback_user_data);
 
+//------------------------------------------------------------------------------
+/// @brief      Retain a strong reference to the object. The object can be NULL
+///             in which case this method is a no-op.
+///
+/// @param[in]  context  The context.
+///
 IMPELLER_EXPORT
 void ImpellerContextRetain(ImpellerContext IMPELLER_NULLABLE context);
 
+//------------------------------------------------------------------------------
+/// @brief      Release a previously retained reference to the object. The
+///             object can be NULL in which case this method is a no-op.
+///
+/// @param[in]  context  The context.
+///
 IMPELLER_EXPORT
 void ImpellerContextRelease(ImpellerContext IMPELLER_NULLABLE context);
 
@@ -315,18 +392,53 @@ void ImpellerContextRelease(ImpellerContext IMPELLER_NULLABLE context);
 // Surface
 //------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+/// @brief      Create a new surface by wrapping an existing framebuffer object.
+///             The framebuffer must be complete as determined by
+///             `glCheckFramebufferStatus`. The framebuffer is still owned by
+///             the caller and it must be collected once the surface is
+///             collected.
+///
+/// @param[in]  context  The context.
+/// @param[in]  fbo      The fbo object handle.
+/// @param[in]  format   The format of the framebuffer.
+/// @param[in]  size     The size of the framebuffer is texels.
+///
+/// @return     The surface if once can be created, NULL otherwise.
+///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerSurface IMPELLER_NULLABLE
 ImpellerSurfaceCreateWrappedFBONew(ImpellerContext IMPELLER_NULLABLE context,
                                    uint64_t fbo,
                                    ImpellerPixelFormat format,
                                    const ImpellerISize* IMPELLER_NULLABLE size);
 
+//------------------------------------------------------------------------------
+/// @brief      Retain a strong reference to the object. The object can be NULL
+///             in which case this method is a no-op.
+///
+/// @param[in]  surface  The surface.
+///
 IMPELLER_EXPORT
 void ImpellerSurfaceRetain(ImpellerSurface IMPELLER_NULLABLE surface);
 
+//------------------------------------------------------------------------------
+/// @brief      Release a previously retained reference to the object. The
+///             object can be NULL in which case this method is a no-op.
+///
+/// @param[in]  surface  The surface.
+///
 IMPELLER_EXPORT
 void ImpellerSurfaceRelease(ImpellerSurface IMPELLER_NULLABLE surface);
 
+//------------------------------------------------------------------------------
+/// @brief      Draw a display list onto the surface. The same display list can
+///             be drawn multiple times to different surfaces.
+///
+/// @param[in]  surface       The surface to draw the display list to.
+/// @param[in]  display_list  The display list to draw onto the surface.
+///
+/// @return     If the display list could be drawn onto the surface.
+///
 IMPELLER_EXPORT
 bool ImpellerSurfaceDrawDisplayList(
     ImpellerSurface IMPELLER_NULLABLE surface,
@@ -336,9 +448,21 @@ bool ImpellerSurfaceDrawDisplayList(
 // Path
 //------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+/// @brief      Retain a strong reference to the object. The object can be NULL
+///             in which case this method is a no-op.
+///
+/// @param[in]  path  The path.
+///
 IMPELLER_EXPORT
 void ImpellerPathRetain(ImpellerPath IMPELLER_NULLABLE path);
 
+//------------------------------------------------------------------------------
+/// @brief      Release a previously retained reference to the object. The
+///             object can be NULL in which case this method is a no-op.
+///
+/// @param[in]  path  The path.
+///
 IMPELLER_EXPORT
 void ImpellerPathRelease(ImpellerPath IMPELLER_NULLABLE path);
 
@@ -346,29 +470,83 @@ void ImpellerPathRelease(ImpellerPath IMPELLER_NULLABLE path);
 // Path Builder
 //------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+/// @brief      Create a new path builder. Paths themselves are immutable.
+///             A builder builds these immutable paths.
+///
+/// @return     The path builder.
+///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerPathBuilder IMPELLER_NULLABLE
 ImpellerPathBuilderNew();
 
+//------------------------------------------------------------------------------
+/// @brief      Retain a strong reference to the object. The object can be NULL
+///             in which case this method is a no-op.
+///
+/// @param[in]  builder  The builder.
+///
 IMPELLER_EXPORT
 void ImpellerPathBuilderRetain(ImpellerPathBuilder IMPELLER_NULLABLE builder);
 
+//------------------------------------------------------------------------------
+/// @brief      Release a previously retained reference to the object. The
+///             object can be NULL in which case this method is a no-op.
+///
+/// @param[in]  builder  The builder.
+///
 IMPELLER_EXPORT
 void ImpellerPathBuilderRelease(ImpellerPathBuilder IMPELLER_NULLABLE builder);
 
+//------------------------------------------------------------------------------
+/// @brief      Move the cursor to the specified location.
+///
+/// @param[in]  builder   The builder.
+/// @param[in]  location  The location.
+///
 IMPELLER_EXPORT
 void ImpellerPathBuilderMoveTo(ImpellerPathBuilder IMPELLER_NONNULL builder,
                                const ImpellerPoint* IMPELLER_NONNULL location);
 
+//------------------------------------------------------------------------------
+/// @brief      Add a line segment from the current cursor location to the given
+///             location. The cursor location is updated to be at the endpoint.
+///
+/// @param[in]  builder   The builder.
+/// @param[in]  location  The location.
+///
 IMPELLER_EXPORT
 void ImpellerPathBuilderLineTo(ImpellerPathBuilder IMPELLER_NONNULL builder,
                                const ImpellerPoint* IMPELLER_NONNULL location);
 
+//------------------------------------------------------------------------------
+/// @brief      Add a quadratic curve from whose start point is the cursor to
+///             the specified end point using the a single control point.
+///
+///             The new location of the cursor after this call is the end point.
+///
+/// @param[in]  builder        The builder.
+/// @param[in]  control_point  The control point.
+/// @param[in]  end_point      The end point.
+///
 IMPELLER_EXPORT
 void ImpellerPathBuilderQuadraticCurveTo(
     ImpellerPathBuilder IMPELLER_NONNULL builder,
     const ImpellerPoint* IMPELLER_NONNULL control_point,
     const ImpellerPoint* IMPELLER_NONNULL end_point);
 
+//------------------------------------------------------------------------------
+/// @brief      Add a cubic curve whose start point is current cursor location
+///             to the specified end point using the two specified control
+///             points.
+///
+///             The new location of the cursor after this call is the end point
+///             supplied.
+///
+/// @param[in]  builder          The builder
+/// @param[in]  control_point_1  The control point 1
+/// @param[in]  control_point_2  The control point 2
+/// @param[in]  end_point        The end point
+///
 IMPELLER_EXPORT
 void ImpellerPathBuilderCubicCurveTo(
     ImpellerPathBuilder IMPELLER_NONNULL builder,
@@ -376,34 +554,85 @@ void ImpellerPathBuilderCubicCurveTo(
     const ImpellerPoint* IMPELLER_NONNULL control_point_2,
     const ImpellerPoint* IMPELLER_NONNULL end_point);
 
+//------------------------------------------------------------------------------
+/// @brief      Adds a rectangle to the path.
+///
+/// @param[in]  builder  The builder.
+/// @param[in]  rect     The rectangle.
+///
 IMPELLER_EXPORT
 void ImpellerPathBuilderAddRect(ImpellerPathBuilder IMPELLER_NONNULL builder,
                                 const ImpellerRect* IMPELLER_NONNULL rect);
 
+//------------------------------------------------------------------------------
+/// @brief      Add an arc to the path.
+///
+/// @param[in]  builder              The builder.
+/// @param[in]  oval_bounds          The oval bounds.
+/// @param[in]  start_angle_degrees  The start angle in degrees.
+/// @param[in]  end_angle_degrees    The end angle in degrees.
+///
 IMPELLER_EXPORT
 void ImpellerPathBuilderAddArc(ImpellerPathBuilder IMPELLER_NONNULL builder,
                                const ImpellerRect* IMPELLER_NONNULL oval_bounds,
                                float start_angle_degrees,
                                float end_angle_degrees);
 
+//------------------------------------------------------------------------------
+/// @brief      Add an oval to the path.
+///
+/// @param[in]  builder      The builder.
+/// @param[in]  oval_bounds  The oval bounds.
+///
 IMPELLER_EXPORT
 void ImpellerPathBuilderAddOval(
     ImpellerPathBuilder IMPELLER_NONNULL builder,
     const ImpellerRect* IMPELLER_NONNULL oval_bounds);
 
+//------------------------------------------------------------------------------
+/// @brief      Add a rounded rect with potentially non-uniform radii to the
+///             path.
+///
+/// @param[in]  builder         The builder.
+/// @param[in]  rect            The rectangle.
+/// @param[in]  rounding_radii  The rounding radii.
+///
 IMPELLER_EXPORT
 void ImpellerPathBuilderAddRoundedRect(
     ImpellerPathBuilder IMPELLER_NONNULL builder,
     const ImpellerRect* IMPELLER_NONNULL rect,
     const ImpellerRoundingRadii* IMPELLER_NONNULL rounding_radii);
 
+//------------------------------------------------------------------------------
+/// @brief      Close the path.
+///
+/// @param[in]  builder  The builder.
+///
 IMPELLER_EXPORT
 void ImpellerPathBuilderClose(ImpellerPathBuilder IMPELLER_NONNULL builder);
 
+//------------------------------------------------------------------------------
+/// @brief      Create a new path by copying the existing built-up path. The
+///             existing path can continue being added to.
+///
+/// @param[in]  builder  The builder.
+/// @param[in]  fill     The fill.
+///
+/// @return     The impeller path.
+///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerPath IMPELLER_NULLABLE
 ImpellerPathBuilderCopyPathNew(ImpellerPathBuilder IMPELLER_NONNULL builder,
                                ImpellerFillType fill);
 
+//------------------------------------------------------------------------------
+/// @brief      Create a new path using the existing built-up path. The existing
+///             path builder now contains an empty path.
+///
+/// @param[in]  builder  The builder.
+/// @param[in]  fill     The fill.
+///
+/// @return     The impeller path.
+///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerPath IMPELLER_NULLABLE
 ImpellerPathBuilderTakePathNew(ImpellerPathBuilder IMPELLER_NONNULL builder,
                                ImpellerFillType fill);
@@ -412,58 +641,154 @@ ImpellerPathBuilderTakePathNew(ImpellerPathBuilder IMPELLER_NONNULL builder,
 // Paint
 //------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+/// @brief      Create a new paint with default values.
+///
+/// @return     The impeller paint.
+///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerPaint IMPELLER_NULLABLE
 ImpellerPaintNew();
 
+//------------------------------------------------------------------------------
+/// @brief      Retain a strong reference to the object. The object can be NULL
+///             in which case this method is a no-op.
+///
+/// @param[in]  paint  The paint.
+///
 IMPELLER_EXPORT
 void ImpellerPaintRetain(ImpellerPaint IMPELLER_NULLABLE paint);
 
+//------------------------------------------------------------------------------
+/// @brief      Release a previously retained reference to the object. The
+///             object can be NULL in which case this method is a no-op.
+///
+/// @param[in]  paint  The paint.
+///
 IMPELLER_EXPORT
 void ImpellerPaintRelease(ImpellerPaint IMPELLER_NULLABLE paint);
 
+//------------------------------------------------------------------------------
+/// @brief      Set the paint color.
+///
+/// @param[in]  paint  The paint.
+/// @param[in]  color  The color.
+///
 IMPELLER_EXPORT
 void ImpellerPaintSetColor(ImpellerPaint IMPELLER_NONNULL paint,
                            const ImpellerColor* IMPELLER_NONNULL color);
 
+//------------------------------------------------------------------------------
+/// @brief      Set the paint blend mode. The blend mode controls how the new
+///             paints contents are mixed with the values already drawn using
+///             previous draw calls.
+///
+/// @param[in]  paint  The paint.
+/// @param[in]  mode   The mode.
+///
 IMPELLER_EXPORT
 void ImpellerPaintSetBlendMode(ImpellerPaint IMPELLER_NONNULL paint,
                                ImpellerBlendMode mode);
 
+//------------------------------------------------------------------------------
+/// @brief      Set the paint draw style. The style controls if the closed
+///             shapes are filled and/or stroked.
+///
+/// @param[in]  paint  The paint.
+/// @param[in]  style  The style.
+///
 IMPELLER_EXPORT
 void ImpellerPaintSetDrawStyle(ImpellerPaint IMPELLER_NONNULL paint,
                                ImpellerDrawStyle style);
 
+//------------------------------------------------------------------------------
+/// @brief      Sets how strokes rendered using this paint are capped.
+///
+/// @param[in]  paint  The paint.
+/// @param[in]  cap    The stroke cap style.
+///
 IMPELLER_EXPORT
 void ImpellerPaintSetStrokeCap(ImpellerPaint IMPELLER_NONNULL paint,
                                ImpellerStrokeCap cap);
 
+//------------------------------------------------------------------------------
+/// @brief      Sets how strokes rendered using this paint are joined.
+///
+/// @param[in]  paint  The paint.
+/// @param[in]  join   The join.
+///
 IMPELLER_EXPORT
 void ImpellerPaintSetStrokeJoin(ImpellerPaint IMPELLER_NONNULL paint,
                                 ImpellerStrokeJoin join);
 
+//------------------------------------------------------------------------------
+/// @brief      Set the width of the strokes rendered using this paint.
+///
+/// @param[in]  paint  The paint.
+/// @param[in]  width  The width.
+///
 IMPELLER_EXPORT
 void ImpellerPaintSetStrokeWidth(ImpellerPaint IMPELLER_NONNULL paint,
                                  float width);
 
+//------------------------------------------------------------------------------
+/// @brief      Set the miter limit of the strokes rendered using this paint.
+///
+/// @param[in]  paint  The paint.
+/// @param[in]  miter  The miter limit.
+///
 IMPELLER_EXPORT
 void ImpellerPaintSetStrokeMiter(ImpellerPaint IMPELLER_NONNULL paint,
                                  float miter);
 
+//------------------------------------------------------------------------------
+/// @brief      Set the color filter of the paint.
+///
+///             Color filters are functions that take two colors and mix them to
+///             produce a single color. This color is then usually merged with
+///             the destination during blending.
+///
+/// @param[in]  paint         The paint.
+/// @param[in]  color_filter  The color filter.
+///
 IMPELLER_EXPORT
 void ImpellerPaintSetColorFilter(
     ImpellerPaint IMPELLER_NONNULL paint,
     ImpellerColorFilter IMPELLER_NONNULL color_filter);
 
+//------------------------------------------------------------------------------
+/// @brief      Set the color source of the paint.
+///
+///             Color sources are functions that generate colors for each
+///             texture element covered by a draw call.
+///
+/// @param[in]  paint         The paint.
+/// @param[in]  color_source  The color source.
+///
 IMPELLER_EXPORT
 void ImpellerPaintSetColorSource(
     ImpellerPaint IMPELLER_NONNULL paint,
     ImpellerColorSource IMPELLER_NONNULL color_source);
 
+//------------------------------------------------------------------------------
+/// @brief      Set the image filter of a paint.
+///
+///             Image filters are functions that are applied to regions of a
+///             texture to produce a single color.
+///
+/// @param[in]  paint         The paint.
+/// @param[in]  image_filter  The image filter.
+///
 IMPELLER_EXPORT
 void ImpellerPaintSetImageFilter(
     ImpellerPaint IMPELLER_NONNULL paint,
     ImpellerImageFilter IMPELLER_NONNULL image_filter);
 
+//------------------------------------------------------------------------------
+/// @brief      Set the mask filter of a paint.
+///
+/// @param[in]  paint        The paint.
+/// @param[in]  mask_filter  The mask filter.
+///
 IMPELLER_EXPORT
 void ImpellerPaintSetMaskFilter(
     ImpellerPaint IMPELLER_NONNULL paint,
@@ -473,6 +798,39 @@ void ImpellerPaintSetMaskFilter(
 // Texture
 //------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+/// @brief      Create a texture with decompressed bytes.
+///
+///             Impeller will do its best to perform the transfer of this data
+///             to GPU memory with a minimal number of copies. Towards this
+///             end, it may need to send this data to a different thread for
+///             preparation and transfer. To facilitate this transfer, it is
+///             recommended that the content mapping have a release callback
+///             attach to it. When there is a release callback, Impeller assumes
+///             that collection of the data can be deferred till texture upload
+///             is done and can happen on a background thread. When there is no
+///             release callback, Impeller may try to perform an eager copy of
+///             the data if it needs to perform data preparation and transfer on
+///             a background thread. Whether an extra data copy actually occurs
+///             will always depend on the rendering backend in use. But it is
+///             best practice to provide a release callback and be resilient to
+///             the data being released in a deferred manner on a background
+///             thread.
+///
+///
+/// @warning    Do not supply compressed image data directly (PNG, JPEG,
+///             etc...). This function only works with tightly packed
+///             decompressed data.
+///
+/// @param[in]  context                        The context.
+/// @param[in]  descriptor                     The texture descriptor.
+/// @param[in]  contents                       The contents.
+/// @param[in]  contents_on_release_user_data  The baton passes to the contents
+///                                            release callback if one exists.
+///
+/// @return     The texture if one can be created using the provided data, NULL
+///             otherwise.
+///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerTexture IMPELLER_NULLABLE
 ImpellerTextureCreateWithContentsNew(
     ImpellerContext IMPELLER_NONNULL context,
@@ -480,6 +838,30 @@ ImpellerTextureCreateWithContentsNew(
     const ImpellerMapping* IMPELLER_NONNULL contents,
     void* IMPELLER_NULLABLE contents_on_release_user_data);
 
+//------------------------------------------------------------------------------
+/// @brief      Create a texture with an externally created OpenGL texture
+///             handle.
+///
+///             Ownership of the handle is transferred over to Impeller after a
+///             successful call to this method. Impeller is responsible for
+///             calling glDeleteTextures on this handle. Do **not** collect this
+///             handle yourself as this will lead to a double-free.
+///
+///             The handle must be created in the same context as the one used
+///             by Impeller. If a different context is used, that context must
+///             be in the same sharegroup as Impellers OpenGL context and all
+///             synchronization of texture contents must already be complete.
+///
+///             If the context is not an OpenGL context, this call will always
+///             fail.
+///
+/// @param[in]  context     The context
+/// @param[in]  descriptor  The descriptor
+/// @param[in]  handle      The handle
+///
+/// @return     The texture if one could be created by adopting the supplied
+///             texture handle, NULL otherwise.
+///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerTexture IMPELLER_NULLABLE
 ImpellerTextureCreateWithOpenGLTextureHandleNew(
     ImpellerContext IMPELLER_NONNULL context,
@@ -487,12 +869,37 @@ ImpellerTextureCreateWithOpenGLTextureHandleNew(
     uint64_t handle  // transfer-in ownership
 );
 
+//------------------------------------------------------------------------------
+/// @brief      Retain a strong reference to the object. The object can be NULL
+///             in which case this method is a no-op.
+///
+/// @param[in]  texture  The texture.
+///
 IMPELLER_EXPORT
 void ImpellerTextureRetain(ImpellerTexture IMPELLER_NULLABLE texture);
 
+//------------------------------------------------------------------------------
+/// @brief      Release a previously retained reference to the object. The
+///             object can be NULL in which case this method is a no-op.
+///
+/// @param[in]  texture  The texture.
+///
 IMPELLER_EXPORT
 void ImpellerTextureRelease(ImpellerTexture IMPELLER_NULLABLE texture);
 
+//------------------------------------------------------------------------------
+/// @brief      Get the OpenGL handle associated with this texture. If this is
+///             not an OpenGL texture, this method will always return 0.
+///
+///             OpenGL handles are lazily created, this method will return
+///             GL_NONE is no OpenGL handle is available. To ensure that this
+///             call eagerly creates an OpenGL texture, call this on a thread
+///             where Impeller knows there is an OpenGL context available.
+///
+/// @param[in]  texture  The texture.
+///
+/// @return     The OpenGL handle if one is available, GL_NONE otherwise.
+///
 IMPELLER_EXPORT
 uint64_t ImpellerTextureGetOpenGLHandle(
     ImpellerTexture IMPELLER_NONNULL texture);
@@ -501,14 +908,40 @@ uint64_t ImpellerTextureGetOpenGLHandle(
 // Color Sources
 //------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+/// @brief      Retain a strong reference to the object. The object can be NULL
+///             in which case this method is a no-op.
+///
+/// @param[in]  color_source  The color source.
+///
+
 IMPELLER_EXPORT
 void ImpellerColorSourceRetain(
     ImpellerColorSource IMPELLER_NULLABLE color_source);
 
+//------------------------------------------------------------------------------
+/// @brief      Release a previously retained reference to the object. The
+///             object can be NULL in which case this method is a no-op.
+///
+/// @param[in]  color_source  The color source.
+///
 IMPELLER_EXPORT
 void ImpellerColorSourceRelease(
     ImpellerColorSource IMPELLER_NULLABLE color_source);
 
+//------------------------------------------------------------------------------
+/// @brief      Create a color source that forms a linear gradient.
+///
+/// @param[in]  start_point     The start point.
+/// @param[in]  end_point       The end point.
+/// @param[in]  stop_count      The stop count.
+/// @param[in]  colors          The colors.
+/// @param[in]  stops           The stops.
+/// @param[in]  tile_mode       The tile mode.
+/// @param[in]  transformation  The transformation.
+///
+/// @return     The color source.
+///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerColorSource IMPELLER_NULLABLE
 ImpellerColorSourceCreateLinearGradientNew(
     const ImpellerPoint* IMPELLER_NONNULL start_point,
@@ -519,6 +952,19 @@ ImpellerColorSourceCreateLinearGradientNew(
     ImpellerTileMode tile_mode,
     const ImpellerMatrix* IMPELLER_NULLABLE transformation);
 
+//------------------------------------------------------------------------------
+/// @brief      Create a color source that forms a radial gradient.
+///
+/// @param[in]  center          The center.
+/// @param[in]  radius          The radius.
+/// @param[in]  stop_count      The stop count.
+/// @param[in]  colors          The colors.
+/// @param[in]  stops           The stops.
+/// @param[in]  tile_mode       The tile mode.
+/// @param[in]  transformation  The transformation.
+///
+/// @return     The color source.
+///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerColorSource IMPELLER_NULLABLE
 ImpellerColorSourceCreateRadialGradientNew(
     const ImpellerPoint* IMPELLER_NONNULL center,
@@ -529,6 +975,21 @@ ImpellerColorSourceCreateRadialGradientNew(
     ImpellerTileMode tile_mode,
     const ImpellerMatrix* IMPELLER_NULLABLE transformation);
 
+//------------------------------------------------------------------------------
+/// @brief      Create a color source that forms a conical gradient.
+///
+/// @param[in]  start_center    The start center.
+/// @param[in]  start_radius    The start radius.
+/// @param[in]  end_center      The end center.
+/// @param[in]  end_radius      The end radius.
+/// @param[in]  stop_count      The stop count.
+/// @param[in]  colors          The colors.
+/// @param[in]  stops           The stops.
+/// @param[in]  tile_mode       The tile mode.
+/// @param[in]  transformation  The transformation.
+///
+/// @return     The color source.
+///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerColorSource IMPELLER_NULLABLE
 ImpellerColorSourceCreateConicalGradientNew(
     const ImpellerPoint* IMPELLER_NONNULL start_center,
@@ -541,6 +1002,20 @@ ImpellerColorSourceCreateConicalGradientNew(
     ImpellerTileMode tile_mode,
     const ImpellerMatrix* IMPELLER_NULLABLE transformation);
 
+//------------------------------------------------------------------------------
+/// @brief      Create a color source that forms a sweep gradient.
+///
+/// @param[in]  center          The center.
+/// @param[in]  start           The start.
+/// @param[in]  end             The end.
+/// @param[in]  stop_count      The stop count.
+/// @param[in]  colors          The colors.
+/// @param[in]  stops           The stops.
+/// @param[in]  tile_mode       The tile mode.
+/// @param[in]  transformation  The transformation.
+///
+/// @return     The color source.
+///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerColorSource IMPELLER_NULLABLE
 ImpellerColorSourceCreateSweepGradientNew(
     const ImpellerPoint* IMPELLER_NONNULL center,
@@ -552,6 +1027,17 @@ ImpellerColorSourceCreateSweepGradientNew(
     ImpellerTileMode tile_mode,
     const ImpellerMatrix* IMPELLER_NULLABLE transformation);
 
+//------------------------------------------------------------------------------
+/// @brief      Create a color source that samples from an image.
+///
+/// @param[in]  image                 The image.
+/// @param[in]  horizontal_tile_mode  The horizontal tile mode.
+/// @param[in]  vertical_tile_mode    The vertical tile mode.
+/// @param[in]  sampling              The sampling.
+/// @param[in]  transformation        The transformation.
+///
+/// @return     The color source.
+///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerColorSource IMPELLER_NULLABLE
 ImpellerColorSourceCreateImageNew(
     ImpellerTexture IMPELLER_NONNULL image,
@@ -564,14 +1050,35 @@ ImpellerColorSourceCreateImageNew(
 // Color Filters
 //------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+/// @brief      Retain a strong reference to the object. The object can be NULL
+///             in which case this method is a no-op.
+///
+/// @param[in]  color_filter  The color filter.
+///
 IMPELLER_EXPORT
 void ImpellerColorFilterRetain(
     ImpellerColorFilter IMPELLER_NULLABLE color_filter);
 
+//------------------------------------------------------------------------------
+/// @brief      Release a previously retained reference to the object. The
+///             object can be NULL in which case this method is a no-op.
+///
+/// @param[in]  color_filter  The color filter.
+///
 IMPELLER_EXPORT
 void ImpellerColorFilterRelease(
     ImpellerColorFilter IMPELLER_NULLABLE color_filter);
 
+//------------------------------------------------------------------------------
+/// @brief      Create a color filter that performs blending of pixel values
+///             independently.
+///
+/// @param[in]  color       The color.
+/// @param[in]  blend_mode  The blend mode.
+///
+/// @return     The color filter.
+///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerColorFilter IMPELLER_NULLABLE
 ImpellerColorFilterCreateBlendNew(const ImpellerColor* IMPELLER_NONNULL color,
                                   ImpellerBlendMode blend_mode);
