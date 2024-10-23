@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "flutter/fml/native_library.h"
 #include "flutter/testing/testing.h"
 #include "impeller/base/allocation.h"
 #include "impeller/renderer/backend/gles/context_gles.h"
@@ -10,6 +11,7 @@
 #include "impeller/toolkit/interop/dl_builder.h"
 #include "impeller/toolkit/interop/formats.h"
 #include "impeller/toolkit/interop/impeller.h"
+#include "impeller/toolkit/interop/impeller.hpp"
 #include "impeller/toolkit/interop/paint.h"
 #include "impeller/toolkit/interop/paragraph.h"
 #include "impeller/toolkit/interop/paragraph_builder.h"
@@ -30,18 +32,14 @@ TEST_P(InteropPlaygroundTest, CanCreateContext) {
 }
 
 TEST_P(InteropPlaygroundTest, CanCreateDisplayListBuilder) {
-  auto builder = ImpellerDisplayListBuilderNew(nullptr);
-  ASSERT_NE(builder, nullptr);
-  ImpellerMatrix matrix;
-  ImpellerDisplayListBuilderGetTransform(builder, &matrix);
-  ASSERT_TRUE(ToImpellerType(matrix).IsIdentity());
-  ASSERT_EQ(ImpellerDisplayListBuilderGetSaveCount(builder), 1u);
-  ImpellerDisplayListBuilderSave(builder);
-  ASSERT_EQ(ImpellerDisplayListBuilderGetSaveCount(builder), 2u);
-  // ImpellerDisplayListBuilderSave(nullptr); <-- Compiler error.
-  ImpellerDisplayListBuilderRestore(builder);
-  ASSERT_EQ(ImpellerDisplayListBuilderGetSaveCount(builder), 1u);
-  ImpellerDisplayListBuilderRelease(builder);
+  hpp::DisplayListBuilder builder;
+  ASSERT_TRUE(builder);
+  ASSERT_TRUE(ToImpellerType(builder.GetTransform()).IsIdentity());
+  ASSERT_EQ(builder.GetSaveCount(), 1u);
+  builder.Save();
+  ASSERT_EQ(builder.GetSaveCount(), 2u);
+  builder.Restore();
+  ASSERT_EQ(builder.GetSaveCount(), 1u);
 }
 
 TEST_P(InteropPlaygroundTest, CanCreateSurface) {
@@ -194,62 +192,54 @@ TEST_P(InteropPlaygroundTest, CanCreateOpenGLImage) {
 
 TEST_P(InteropPlaygroundTest, CanCreateParagraphs) {
   // Create a typography context.
-  auto type_context = Adopt<TypographyContext>(ImpellerTypographyContextNew());
+  hpp::TypographyContext type_context;
   ASSERT_TRUE(type_context);
 
   // Create a builder.
-  auto builder =
-      Adopt<ParagraphBuilder>(ImpellerParagraphBuilderNew(type_context.GetC()));
+  hpp::ParagraphBuilder builder(type_context);
   ASSERT_TRUE(builder);
 
   // Create a paragraph style with the font size and foreground and background
   // colors.
-  auto style = Adopt<ParagraphStyle>(ImpellerParagraphStyleNew());
+  hpp::ParagraphStyle style;
   ASSERT_TRUE(style);
-  ImpellerParagraphStyleSetFontSize(style.GetC(), 150.0f);
+  style.SetFontSize(150.0f);
 
   {
-    auto paint = Adopt<Paint>(ImpellerPaintNew());
+    hpp::Paint paint;
     ASSERT_TRUE(paint);
-    ImpellerColor color = {1.0, 0.0, 0.0, 1.0};
-    ImpellerPaintSetColor(paint.GetC(), &color);
-    ImpellerParagraphStyleSetForeground(style.GetC(), paint.GetC());
+    paint.SetColor({1.0, 0.0, 0.0, 1.0});
+    style.SetForeground(paint);
   }
 
   {
-    auto paint = Adopt<Paint>(ImpellerPaintNew());
-    ASSERT_TRUE(paint);
-    ImpellerColor color = {1.0, 1.0, 1.0, 1.0};
-    ImpellerPaintSetColor(paint.GetC(), &color);
-    ImpellerParagraphStyleSetBackground(style.GetC(), paint.GetC());
+    hpp::Paint paint;
+    paint.SetColor({1.0, 1.0, 1.0, 1.0});
+    style.SetBackground(paint);
   }
 
   // Push the style onto the style stack.
-  ImpellerParagraphBuilderPushStyle(builder.GetC(), style.GetC());
+  builder.PushStyle(style);
   std::string text = "the ⚡️ quick ⚡️ brown 🦊 fox jumps over the lazy dog 🐶.";
 
   // Add the paragraph text data.
-  ImpellerParagraphBuilderAddText(builder.GetC(),
-                                  reinterpret_cast<const uint8_t*>(text.data()),
-                                  text.size());
+  builder.AddText(text);
 
   // Layout and build the paragraph.
-  auto paragraph = Adopt<Paragraph>(
-      ImpellerParagraphBuilderBuildParagraphNew(builder.GetC(), 1200.0f));
+  auto paragraph = builder.Build(1200.0f);
   ASSERT_TRUE(paragraph);
 
   // Create a display list with just the paragraph drawn into it.
-  auto dl_builder =
-      Adopt<DisplayListBuilder>(ImpellerDisplayListBuilderNew(nullptr));
-  ImpellerPoint point = {20, 20};
-  ImpellerDisplayListBuilderDrawParagraph(dl_builder.GetC(), paragraph.GetC(),
-                                          &point);
-  auto dl = Adopt<DisplayList>(
-      ImpellerDisplayListBuilderCreateDisplayListNew(dl_builder.GetC()));
+  hpp::DisplayListBuilder dl_builder;
+  dl_builder.DrawParagraph(paragraph, {20, 20});
+
+  // Build the display list.
+  auto dl = dl_builder.Build();
 
   ASSERT_TRUE(
       OpenPlaygroundHere([&](const auto& context, const auto& surface) -> bool {
-        ImpellerSurfaceDrawDisplayList(surface.GetC(), dl.GetC());
+        hpp::Surface window(surface.GetC());
+        window.Draw(dl);
         return true;
       }));
 }
